@@ -16,3 +16,4 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 SERVER_TIMESTAMP = firestore.SERVER_TIMESTAMP
+DELETE_FIELD = firestore.DELETE_FIELD

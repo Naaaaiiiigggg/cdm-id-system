@@ -2,23 +2,25 @@
 ID token as   Authorization: Bearer <token>.  We verify it with Firebase, then read the
 person's role from the Firestore 'users' collection."""
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import OAuth2PasswordBearer
 from firebase_admin import auth
 
 from .firebase import db
 
-bearer = HTTPBearer(auto_error=False, description="Firebase ID token from a signed-in user")
+# In Swagger, Authorize asks for email + password and gets the token from /api/v1/auth/login.
+# Postman and other clients can still send:  Authorization: Bearer <Firebase ID token>
+oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False, description="Sign in with your email and password")
 
 
 def _unauthorized(detail: str):
     return HTTPException(status.HTTP_401_UNAUTHORIZED, detail, headers={"WWW-Authenticate": "Bearer"})
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer)) -> dict:
-    if credentials is None:
+def get_current_user(token: str | None = Depends(oauth2)) -> dict:
+    if not token:
         raise _unauthorized("Missing Bearer token")
     try:
-        decoded = auth.verify_id_token(credentials.credentials)  # decodes the Firebase JWT
+        decoded = auth.verify_id_token(token)  # decodes the Firebase JWT
     except Exception:
         raise _unauthorized("Invalid or expired Bearer token")
 

@@ -39,7 +39,7 @@ def create_request(payload: RequestCreate, user: dict = Depends(get_current_user
 
     request_no = f"REQ-{datetime.now():%Y%m%d}-{uuid.uuid4().hex[:4].upper()}"
     data = {"uid": uid, "studentNo": student_no, "requestNo": request_no,
-            "type": payload.type, "status": "Submitted", "createdAt": SERVER_TIMESTAMP}
+            "type": payload.type, "reason": payload.reason or "", "status": "Submitted", "createdAt": SERVER_TIMESTAMP}
     db.collection(COL).document(request_no).set(data)
     audit(user, "create_request", request_no)
     return {"message": "Request submitted", "data": clean(db.collection(COL).document(request_no).get().to_dict())}

@@ -22,6 +22,7 @@ import AdminDashboard from './src/screens/admin/AdminDashboard';
 import AdminRequests from './src/screens/admin/AdminRequests';
 import AdminPrint from './src/screens/admin/AdminPrint';
 import AdminAccounts from './src/screens/admin/AdminAccounts';
+import AdminProfile from './src/screens/admin/AdminProfile';
 
 export default function App() {
   const [booting, setBooting] = useState(true);
@@ -85,12 +86,13 @@ export default function App() {
       list: <AdminRequests />,
       print: <AdminPrint />,
       accts: <AdminAccounts />,
+      aprof: <AdminProfile me={session} onLogout={logout} />,
     }[tab];
   } else {
     tabs = STUDENT_TABS;
     body = {
       home: <StudentHome me={session} go={setTab} />,
-      req: <StudentRequest />,
+      req: <StudentRequest me={session} go={setTab} />,
       notif: <StudentAlerts me={session} />,
       prof: <StudentProfile me={session} onLogout={logout} />,
     }[tab];

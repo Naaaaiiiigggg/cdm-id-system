@@ -69,12 +69,34 @@ service cloud.firestore {
     match /requests/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow create: if isActiveStudent()
+        && request.resource.data.keys().hasOnly(['uid', 'studentNo', 'requestNo', 'type', 'reason', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'studentNo', 'requestNo', 'type', 'reason', 'status', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.studentNo == myProfile().studentNo
+        && request.resource.data.requestNo == id
         && request.resource.data.status == 'Submitted'
-        && request.resource.data.type in ['New ID', 'Replacement'];
+        && request.resource.data.type in ['New ID', 'Replacement']
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 60
+        && request.resource.data.createdAt == request.time;
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    // ---------- student_signatures: drawn by the student in the app, saved ONCE ----------
+    // Only the Registrar (through the API) can reset it, so the signature on a printed ID can't be swapped.
+    match /student_signatures/{studentNo} {
+      allow read: if isAdmin() || (hasProfile() && myProfile().studentNo == studentNo);
+      allow create: if isActiveStudent()
+        && myProfile().studentNo == studentNo
+        && request.resource.data.keys().hasOnly(['path', 'box', 'updatedAt'])
+        && request.resource.data.path is string
+        && request.resource.data.path.size() > 0
+        && request.resource.data.path.size() <= 20000
+        && request.resource.data.box is list
+        && request.resource.data.box.size() == 4
+        && request.resource.data.updatedAt == request.time;
+      allow update, delete: if false;
     }
 
     match /notifications/{id} {

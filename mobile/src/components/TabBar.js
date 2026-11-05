@@ -4,7 +4,7 @@ import { C } from '../theme';
 
 // Each tab: [key, Feather icon name, label]
 export const STUDENT_TABS = [['home', 'home', 'Home'], ['req', 'file-text', 'Request'], ['notif', 'bell', 'Alerts'], ['prof', 'user', 'Profile']];
-export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requests'], ['print', 'printer', 'Print'], ['accts', 'users', 'Accounts']];
+export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requests'], ['print', 'printer', 'Print'], ['accts', 'users', 'Accounts'], ['aprof', 'user', 'Profile']];
 
 export default function TabBar({ tabs, tab, setTab }) {
   return (

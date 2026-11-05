@@ -35,3 +35,14 @@ export const PASSWORD_RULES = [
   { key: 'sym', label: 'One symbol (e.g. ! @ # $ %)', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 export const isStrongPassword = (p) => PASSWORD_RULES.every((r) => r.test(p));
+
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// "2006-02-04" -> "February 4, 2006"
+export function longDate(text) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || '');
+  return m ? `${FULL_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : text || '—';
+}
+
+// "09123456789" -> "0912••••789" (used before the student has an account)
+export const maskPhone = (p) => (p && p.length >= 8 ? `${p.slice(0, 4)}${'•'.repeat(p.length - 7)}${p.slice(-3)}` : p || '—');

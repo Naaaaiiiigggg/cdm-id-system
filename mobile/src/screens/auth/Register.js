@@ -9,7 +9,7 @@ import KV from '../../components/KV';
 import { createLogin, verifyStudent } from '../../services/auth';
 import { friendly } from '../../services/errors';
 import { programName, instituteName } from '../../data/programs';
-import { EMAIL_RE, PASSWORD_RULES, STUDENT_NO_RE, formatStudentNo, isStrongPassword } from '../../utils/format';
+import { EMAIL_RE, PASSWORD_RULES, STUDENT_NO_RE, formatStudentNo, isStrongPassword, longDate, maskPhone } from '../../utils/format';
 import { C, common } from '../../theme';
 
 // Steps: 1 student number + birthdate, 2 "Is this you?", 3 personal email + password
@@ -86,6 +86,11 @@ export default function Register({ onDone, onBack }) {
           <KV k="Program" v={programName(rec.program)} />
           <KV k="Institute" v={instituteName(rec.program)} />
           <KV k="Year level" v={rec.yearLevel} />
+          <KV k="Birthdate" v={longDate(rec.birthdate)} />
+          <KV k="Contact" v={maskPhone(rec.contact)} />
+          <KV k="Address" v={rec.address || '—'} />
+          <KV k="Guardian" v={rec.guardian || '—'} />
+          <KV k="Guardian no." v={maskPhone(rec.guardianContact)} />
         </Card>
         <Text style={[common.mu, { marginTop: 10 }]}>These details come from the Registrar and cannot be edited here.</Text>
         <Btn title="Yes, this is me" onPress={() => { setErr(''); setStep(3); }} />
