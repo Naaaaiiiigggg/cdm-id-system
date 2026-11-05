@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+.dist/
+dist/
+web-build/
+.env
+*.log
+serviceAccountKey.json
+**/serviceAccountKey.json
+venv/
+**/venv/
+__pycache__/
+*.pyc
+.DS_Store
+backend/postman/

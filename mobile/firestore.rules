@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function hasProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return hasProfile() && myProfile().role == 'admin' && myProfile().status == 'Active';
+    }
+    function isActiveStudent() {
+      return hasProfile() && myProfile().role == 'student' && myProfile().status == 'Active';
+    }
+    function verifiedFor(studentNo) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/verifications/$(request.auth.uid))
+        && get(/databases/$(database)/documents/verifications/$(request.auth.uid)).data.studentNo == studentNo;
+    }
+
+    // "I am student 24-66298, born 2006-02-04": allowed only if it matches the Registrar record
+    // and nobody has registered that number yet.
+    match /verifications/{uid} {
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['studentNo', 'birthdate', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/registrar_students/$(request.resource.data.studentNo))
+        && get(/databases/$(database)/documents/registrar_students/$(request.resource.data.studentNo)).data.birthdate == request.resource.data.birthdate
+        && !exists(/databases/$(database)/documents/registered_students/$(request.resource.data.studentNo));
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['role', 'status', 'studentNo', 'email', 'createdAt'])
+        && request.resource.data.keys().hasAll(['role', 'status', 'studentNo', 'email', 'createdAt'])
+        && request.resource.data.role == 'student'
+        && request.resource.data.status == 'Active'
+        && request.resource.data.createdAt == request.time
+        && verifiedFor(request.resource.data.studentNo)
+        && !exists(/databases/$(database)/documents/registered_students/$(request.resource.data.studentNo));
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['Active', 'Suspended'];
+      allow delete: if false;
+    }
+
+    match /registrar_students/{studentNo} {
+      allow read: if isAdmin()
+        || (hasProfile() && myProfile().studentNo == studentNo)
+        || verifiedFor(studentNo);
+      allow write: if false;
+    }
+
+    match /registered_students/{studentNo} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentNo == studentNo;
+      allow read, update, delete: if false;
+    }
+
+    match /requests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isActiveStudent()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.studentNo == myProfile().studentNo
+        && request.resource.data.status == 'Submitted'
+        && request.resource.data.type in ['New ID', 'Replacement'];
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /notifications/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /audit_logs/{id} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}
