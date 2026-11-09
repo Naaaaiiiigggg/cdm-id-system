@@ -15,6 +15,11 @@ service cloud.firestore {
     function isActiveStudent() {
       return hasProfile() && myProfile().role == 'student' && myProfile().status == 'Active';
     }
+    // The ID can only be printed or handed out when the Registrar photo and the student's signature exist.
+    function printReady(studentNo) {
+      return get(/databases/$(database)/documents/registrar_students/$(studentNo)).data.get('photo', '') != ''
+        && exists(/databases/$(database)/documents/student_signatures/$(studentNo));
+    }
     function verifiedFor(studentNo) {
       return signedIn()
         && exists(/databases/$(database)/documents/verifications/$(request.auth.uid))
@@ -79,13 +84,30 @@ service cloud.firestore {
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 60
         && request.resource.data.createdAt == request.time;
-      // The Registrar can only change the stage and the note to the student. Nothing else.
+      // The Registrar can only change: the stage, the note, the date of each step and the pickup details.
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt', 'stageDates', 'pickupDate', 'pickupFrom', 'pickupTo', 'pickupBring'])
         && request.resource.data.status in ['Submitted', 'Under Review', 'Approved', 'For Printing', 'Ready for Pickup', 'Claimed', 'Rejected']
         && request.resource.data.adminNote is string
         && request.resource.data.adminNote.size() <= 200
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        && (!('stageDates' in request.resource.data)
+            || (request.resource.data.stageDates is map
+                && request.resource.data.stageDates.keys().hasOnly(['Submitted', 'Under Review', 'Approved', 'For Printing', 'Ready for Pickup', 'Claimed', 'Rejected'])))
+        && (!('pickupDate' in request.resource.data)
+            || (request.resource.data.pickupDate is string && request.resource.data.pickupDate.size() <= 10))
+        && (!('pickupFrom' in request.resource.data)
+            || (request.resource.data.pickupFrom is string && request.resource.data.pickupFrom.size() <= 5))
+        && (!('pickupTo' in request.resource.data)
+            || (request.resource.data.pickupTo is string && request.resource.data.pickupTo.size() <= 5))
+        && (!('pickupBring' in request.resource.data)
+            || (request.resource.data.pickupBring is string && request.resource.data.pickupBring.size() <= 100))
+        // Ready for Pickup needs a pickup date written like 2026-11-09
+        && (request.resource.data.status != 'Ready for Pickup'
+            || ('pickupDate' in request.resource.data && request.resource.data.pickupDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        // For Printing, Ready for Pickup and Claimed need the photo and the signature
+        && (!(request.resource.data.status in ['For Printing', 'Ready for Pickup', 'Claimed'])
+            || printReady(resource.data.studentNo));
       allow delete: if false;
     }
 
@@ -110,7 +132,7 @@ service cloud.firestore {
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly(['uid', 'requestNo', 'message', 'createdAt'])
         && request.resource.data.message is string
-        && request.resource.data.message.size() <= 400
+        && request.resource.data.message.size() <= 600
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }

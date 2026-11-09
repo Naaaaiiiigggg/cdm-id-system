@@ -1,6 +1,8 @@
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getStudentMap } from './students';
+import { STATUSES } from '../theme';
+import { timeRange, weekdayDate } from '../utils/format';
 
 const newestFirst = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
 const toList = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(newestFirst);
@@ -67,27 +69,63 @@ export async function saveMySignature(studentNo, { path, box }) {
   return { path, box };
 }
 
-// Admin: change a request's status and/or the note to the student.
+// The date each step was reached: { 'Approved': <timestamp>, ... }. Going back a step removes the later dates.
+function nextStageDates(prev = {}, status) {
+  const i = STATUSES.indexOf(status);
+  const out = {};
+  Object.entries(prev).forEach(([k, v]) => {
+    if (status === 'Rejected') out[k] = v;
+    else if (k !== 'Rejected' && STATUSES.indexOf(k) <= i) out[k] = v;
+  });
+  out[status] = serverTimestamp();
+  return out;
+}
+
+const pickupSentence = (p) => {
+  const t = timeRange(p.from, p.to);
+  return ` Pick it up on ${weekdayDate(p.date)}${t ? `, ${t}` : ''}.${p.bring ? ` Bring: ${p.bring}.` : ''}`;
+};
+
+// Admin: change a request's status, the note to the student and (for Ready for Pickup) the pickup details.
+// pickup = { date: 'YYYY-MM-DD', from: 'HH:MM' | '', to: 'HH:MM' | '', bring: '' }
 // One batch: updates the request, sends the student an alert, and writes an audit log entry.
-export async function updateRequest(request, { status, note }) {
+export async function updateRequest(request, { status, note, pickup }) {
   const admin = auth.currentUser;
   const statusChanged = status !== request.status;
   const noteChanged = note !== (request.adminNote || '');
-  if (!statusChanged && !noteChanged) return;
+  const pickupChanged = !!pickup && (
+    pickup.date !== (request.pickupDate || '') || pickup.from !== (request.pickupFrom || '')
+    || pickup.to !== (request.pickupTo || '') || pickup.bring !== (request.pickupBring || '')
+  );
+  if (!statusChanged && !noteChanged && !pickupChanged) return;
 
   let message;
   if (status === 'Rejected') message = `Your ID request ${request.requestNo} was rejected.`;
-  else if (statusChanged) message = `Your ID request ${request.requestNo} is now: ${status}.`;
-  else message = `The Registrar left a note on your request ${request.requestNo}.`;
+  else if (statusChanged) {
+    message = `Your ID request ${request.requestNo} is now: ${status}.`;
+    if (pickup && status === 'Ready for Pickup') message += pickupSentence(pickup);
+  } else if (pickupChanged) {
+    message = `The pickup details for your ID request ${request.requestNo} were updated.${pickupSentence(pickup)}`;
+  } else message = `The Registrar left a note on your request ${request.requestNo}.`;
   if (note) message += ` Note: ${note}`;
+  message = message.slice(0, 600);
+
+  const changes = { status, adminNote: note, updatedAt: serverTimestamp() };
+  if (statusChanged) changes.stageDates = nextStageDates(request.stageDates, status);
+  if (pickup) {
+    changes.pickupDate = pickup.date;
+    changes.pickupFrom = pickup.from;
+    changes.pickupTo = pickup.to;
+    changes.pickupBring = pickup.bring;
+  }
 
   const batch = writeBatch(db);
-  batch.update(doc(db, 'requests', request.id), { status, adminNote: note, updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'requests', request.id), changes);
   batch.set(doc(collection(db, 'notifications')), {
     uid: request.uid, requestNo: request.requestNo, message, createdAt: serverTimestamp(),
   });
   batch.set(doc(collection(db, 'audit_logs')), {
-    action: statusChanged ? `set_status:${status}` : 'set_note', target: request.requestNo,
+    action: statusChanged ? `set_status:${status}` : pickupChanged ? 'set_pickup' : 'set_note', target: request.requestNo,
     by: admin.uid, byEmail: admin.email, createdAt: serverTimestamp(),
   });
   await batch.commit();

@@ -10,7 +10,7 @@ import IdCard from '../../components/IdCard';
 import IdCardBack from '../../components/IdCardBack';
 import useLoad from '../../utils/useLoad';
 import { getMediaAndRequests } from '../../services/requests';
-import { formatDate } from '../../utils/format';
+import { formatDate, shortDate, timeRange, weekdayDate } from '../../utils/format';
 import { C, PILL, STATUSES, common } from '../../theme';
 
 const ICON = {
@@ -25,6 +25,9 @@ const MESSAGE = {
   'Ready for Pickup': "Your ID is ready. Please claim it at the Registrar's Office.",
   Claimed: 'You have claimed your ID. Enjoy!',
 };
+
+// When a step was reached (Submitted uses the day the request was made).
+const stageDate = (r, name) => shortDate(r.stageDates?.[name] || (name === 'Submitted' ? r.createdAt : null));
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -86,6 +89,18 @@ export default function StudentHome({ me, go }) {
                 </View>
               </View>
             ) : null}
+            {r.status === 'Ready for Pickup' && r.pickupDate ? (
+              <View style={styles.pickup}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Feather name="calendar" size={16} color={C.g9} />
+                  <Text style={styles.pickupHead}>Pick up your ID</Text>
+                </View>
+                <Text style={styles.pickupDate}>{weekdayDate(r.pickupDate)}</Text>
+                {timeRange(r.pickupFrom, r.pickupTo) ? <Text style={styles.pickupLine}>{timeRange(r.pickupFrom, r.pickupTo)}</Text> : null}
+                <Text style={styles.pickupLine}>Registrar's Office</Text>
+                {r.pickupBring ? <Text style={styles.pickupBring}>Bring: {r.pickupBring}</Text> : null}
+              </View>
+            ) : null}
             {idx >= 0 ? (
               <>
                 <View style={styles.bars}>
@@ -125,7 +140,10 @@ export default function StudentHome({ me, go }) {
                             <View style={[styles.dot, done && styles.dotDone, now && styles.dotNow]}>
                               {done ? <Feather name="check" size={13} color="#fff" /> : <Text style={{ color: now ? C.g9 : C.mu, fontSize: 11, fontWeight: '800' }}>{i + 1}</Text>}
                             </View>
-                            <Text style={[styles.tlTx, (done || now) && { color: C.ink }, now && { fontWeight: '800' }]}>{name}</Text>
+                            <Text style={[styles.tlTx, (done || now) && { color: C.ink }, now && { fontWeight: '800' }]}>
+                              {name}
+                              {(done || now) && stageDate(r, name) ? <Text style={styles.tlDate}>{` · ${stageDate(r, name)}`}</Text> : null}
+                            </Text>
                           </View>
                           {i < STATUSES.length - 1 && <View style={[styles.line, done && { backgroundColor: C.g9 }]} />}
                         </View>
@@ -206,6 +224,12 @@ const styles = StyleSheet.create({
   dotNow: { borderColor: C.gold },
   line: { width: 2, height: 14, marginLeft: 11, backgroundColor: C.ln },
   tlTx: { color: '#9AA89F', fontSize: 14 },
+  tlDate: { color: C.mu, fontSize: 12, fontWeight: '600' },
+  pickup: { backgroundColor: '#FFF6D6', borderWidth: 1, borderColor: C.gold, borderRadius: 12, padding: 12, marginBottom: 14 },
+  pickupHead: { fontSize: 12, fontWeight: '800', color: C.g9, letterSpacing: 0.5 },
+  pickupDate: { fontSize: 16, fontWeight: '800', color: C.ink, marginTop: 8 },
+  pickupLine: { fontSize: 13, color: C.ink, marginTop: 2 },
+  pickupBring: { fontSize: 13, color: '#5a4410', fontWeight: '700', marginTop: 8 },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.g1, alignItems: 'center', justifyContent: 'center' },
   previewBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.g9, borderRadius: 12, paddingVertical: 12, marginTop: 12 },
   previewTx: { color: '#fff', fontWeight: '700', fontSize: 14 },
