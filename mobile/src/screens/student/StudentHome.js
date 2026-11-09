@@ -77,6 +77,15 @@ export default function StudentHome({ me, go }) {
           </View>
 
           <View style={{ padding: 14 }}>
+            {r.adminNote ? (
+              <View style={styles.noteBox}>
+                <Feather name="message-square" size={16} color="#8A6A12" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.noteHead}>Note from the Registrar</Text>
+                  <Text style={styles.noteBody}>{r.adminNote}</Text>
+                </View>
+              </View>
+            ) : null}
             {idx >= 0 ? (
               <>
                 <View style={styles.bars}>
@@ -179,6 +188,9 @@ const styles = StyleSheet.create({
   heroSub: { color: '#CFE0D6', fontSize: 12 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10, marginTop: 10 },
   chipTx: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  noteBox: { flexDirection: 'row', gap: 10, backgroundColor: '#FBF3DA', borderRadius: 12, padding: 12, marginBottom: 14 },
+  noteHead: { fontSize: 12, fontWeight: '800', color: '#8A6A12' },
+  noteBody: { fontSize: 13, color: '#5a4410', marginTop: 2 },
   stHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   stIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center' },
   stTitle: { fontSize: 17, fontWeight: '800' },

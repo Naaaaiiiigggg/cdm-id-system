@@ -1,5 +1,5 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { db } from './firebase';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import { getStudentMap } from './students';
 
 const newestFirst = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
@@ -65,4 +65,30 @@ export async function saveMySignature(studentNo, { path, box }) {
   }
   await setDoc(doc(db, 'student_signatures', studentNo), { path, box, updatedAt: serverTimestamp() });
   return { path, box };
+}
+
+// Admin: change a request's status and/or the note to the student.
+// One batch: updates the request, sends the student an alert, and writes an audit log entry.
+export async function updateRequest(request, { status, note }) {
+  const admin = auth.currentUser;
+  const statusChanged = status !== request.status;
+  const noteChanged = note !== (request.adminNote || '');
+  if (!statusChanged && !noteChanged) return;
+
+  let message;
+  if (status === 'Rejected') message = `Your ID request ${request.requestNo} was rejected.`;
+  else if (statusChanged) message = `Your ID request ${request.requestNo} is now: ${status}.`;
+  else message = `The Registrar left a note on your request ${request.requestNo}.`;
+  if (note) message += ` Note: ${note}`;
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'requests', request.id), { status, adminNote: note, updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, 'notifications')), {
+    uid: request.uid, requestNo: request.requestNo, message, createdAt: serverTimestamp(),
+  });
+  batch.set(doc(collection(db, 'audit_logs')), {
+    action: statusChanged ? `set_status:${status}` : 'set_note', target: request.requestNo,
+    by: admin.uid, byEmail: admin.email, createdAt: serverTimestamp(),
+  });
+  await batch.commit();
 }

@@ -10,7 +10,7 @@ CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if 
 
 PROGRAMS = ["BSIT", "BSCPE", "BSEd-SCI", "BEEd-GEN", "BEEd-ECED", "BTLEd-ICT", "TCP", "BSBA-HRM", "BSE"]
 YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"]
-STATUSES = ["Submitted", "Under Review", "Approved", "For Printing", "Ready for Pickup", "Claimed"]
+STATUSES = ["Submitted", "Under Review", "Approved", "For Printing", "Ready for Pickup", "Claimed", "Rejected"]
 REQUEST_TYPES = ["New ID", "Replacement"]
 
 # Public Firebase web API key (the same one the mobile app uses). Needed for the /auth/login helper.

@@ -1,9 +1,9 @@
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { C } from '../theme';
 
-export default function Btn({ title, onPress, kind = 'main' }) {
+export default function Btn({ title, onPress, kind = 'main', style, disabled }) {
   return (
-    <TouchableOpacity style={[styles.btn, kind === 'ghost' && styles.ghost]} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.btn, kind === 'ghost' && styles.ghost, style]} onPress={onPress} activeOpacity={0.8} disabled={disabled}>
       <Text style={[styles.tx, kind === 'ghost' && { color: C.g7 }]}>{title}</Text>
     </TouchableOpacity>
   );

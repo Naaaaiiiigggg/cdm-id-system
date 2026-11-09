@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Page from '../../components/Page';
 import Card from '../../components/Card';
 import ReqList from '../../components/ReqList';
+import ManageRequestModal from '../../components/ManageRequestModal';
 import useLoad from '../../utils/useLoad';
 import { getAdminData } from '../../services/requests';
 import { C, common } from '../../theme';
 
 export default function AdminDashboard() {
   const load = useLoad(getAdminData, []);
+  const [sel, setSel] = useState(null);
   const reqs = load.data?.requests || [];
   const count = (s) => reqs.filter((r) => r.status === s).length;
   const attention = reqs.filter((r) => r.status === 'Submitted' || r.status === 'Under Review');
@@ -23,7 +26,13 @@ export default function AdminDashboard() {
         ))}
       </View>
       <Text style={[common.h3, { marginTop: 18 }]}>Needs attention</Text>
-      <ReqList list={attention} students={load.data?.students || {}} />
+      <ReqList list={attention} students={load.data?.students || {}} onPress={setSel} />
+      <ManageRequestModal
+        request={sel ? reqs.find((r) => r.id === sel.id) || sel : null}
+        student={sel ? (load.data?.students || {})[sel.studentNo] : {}}
+        onClose={() => setSel(null)}
+        onSaved={() => { setSel(null); load.reload(); }}
+      />
     </Page>
   );
 }

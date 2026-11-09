@@ -79,7 +79,13 @@ service cloud.firestore {
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 60
         && request.resource.data.createdAt == request.time;
-      allow update: if isAdmin();
+      // The Registrar can only change the stage and the note to the student. Nothing else.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt'])
+        && request.resource.data.status in ['Submitted', 'Under Review', 'Approved', 'For Printing', 'Ready for Pickup', 'Claimed', 'Rejected']
+        && request.resource.data.adminNote is string
+        && request.resource.data.adminNote.size() <= 200
+        && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
 
@@ -101,12 +107,20 @@ service cloud.firestore {
 
     match /notifications/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['uid', 'requestNo', 'message', 'createdAt'])
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 400
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
 
     match /audit_logs/{id} {
-      allow read, create: if isAdmin();
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'target', 'by', 'byEmail', 'createdAt'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
   }
