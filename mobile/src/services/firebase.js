@@ -1,6 +1,7 @@
 // Firebase connection. Every screen and service imports db / auth from here.
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import { Platform } from 'react-native';
+import { initializeAuth, getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -17,13 +18,20 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Keeps the user signed in after the app is closed.
+// Keeps the user signed in after the app or the browser tab is closed.
+// - In a browser, Firebase keeps the login in the browser's own storage by default.
+// - On a phone, we hand it AsyncStorage (that option only exists in the phone build of Firebase).
 // initializeAuth can only run once, so after a fast refresh we reuse the existing one.
 let auth;
-try {
-  auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
-} catch (e) {
+if (Platform.OS === 'web') {
   auth = getAuth(app);
+} else {
+  try {
+    const { getReactNativePersistence } = require('firebase/auth');
+    auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch (e) {
+    auth = getAuth(app);
+  }
 }
 
 // Auto-detect lets Firestore fall back to long polling on phones/networks where the
