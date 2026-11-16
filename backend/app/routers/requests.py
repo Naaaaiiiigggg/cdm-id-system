@@ -72,10 +72,18 @@ def update_status(request_no: str, payload: RequestStatusUpdate, admin: dict = D
     if not snap.exists:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
     current = snap.to_dict()
-    ref.update({"status": payload.status, "updatedAt": SERVER_TIMESTAMP})
+    if payload.status == "Rejected" and not (payload.note or current.get("adminNote")):
+        raise HTTPException(422, "Add a note that explains why the request is rejected")
+    changes = {"status": payload.status, "updatedAt": SERVER_TIMESTAMP}
+    if payload.note is not None:
+        changes["adminNote"] = payload.note.strip()
+    ref.update(changes)
+    note = changes.get("adminNote", current.get("adminNote", ""))
+    message = f"Your ID request {request_no} was rejected." if payload.status == "Rejected" else f"Your ID request {request_no} is now: {payload.status}."
+    if note:
+        message += f" Note: {note}"
     db.collection("notifications").add({
-        "uid": current["uid"], "requestNo": request_no, "createdAt": SERVER_TIMESTAMP,
-        "message": f"Your ID request {request_no} is now: {payload.status}.",
+        "uid": current["uid"], "requestNo": request_no, "createdAt": SERVER_TIMESTAMP, "message": message,
     })
     audit(admin, f"set_status:{payload.status}", request_no)
     return {"message": "Status updated", "data": {"id": request_no, **clean(ref.get().to_dict())}}

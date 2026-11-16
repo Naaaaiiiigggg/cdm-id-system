@@ -16,6 +16,7 @@ export const PILL = {
   'Ready for Pickup': ['#F2C230', '#0E3B2A'], Claimed: ['#E6F0EB', '#1F5C43'],
   Rejected: ['#FDECEA', '#B42318'], Active: ['#DDF1E6', '#1F7A4D'],
   Suspended: ['#FDECEA', '#B42318'], 'Not registered': ['#E8ECF0', '#44505C'],
+  'New ID': ['#E1E8F7', '#2B4C9B'], Replacement: ['#FBF0D5', '#B7791F'],
 };
 
 // Styles shared by many screens

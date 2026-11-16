@@ -46,3 +46,42 @@ export function longDate(text) {
 
 // "09123456789" -> "0912••••789" (used before the student has an account)
 export const maskPhone = (p) => (p && p.length >= 8 ? `${p.slice(0, 4)}${'•'.repeat(p.length - 7)}${p.slice(-3)}` : p || '—');
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// Today as "2026-11-09"
+export const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+// Firestore Timestamp -> "7 Nov"
+export function shortDate(ts) {
+  const d = ts?.toDate ? ts.toDate() : null;
+  return d ? `${d.getDate()} ${MONTHS[d.getMonth()]}` : '';
+}
+
+// "2026-11-09" -> "Monday, November 9, 2026"
+export function weekdayDate(text) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || '');
+  if (!m) return text || '';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return `${WEEKDAYS[d.getDay()]}, ${FULL_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+// "14:30" -> "2:30 PM"
+export function time12(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t || '');
+  if (!m) return '';
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+// ("08:00", "16:00") -> "8:00 AM – 4:00 PM"; one side only -> "From 8:00 AM" / "Until 4:00 PM"
+export function timeRange(from, to) {
+  if (from && to) return `${time12(from)} – ${time12(to)}`;
+  if (from) return `From ${time12(from)}`;
+  if (to) return `Until ${time12(to)}`;
+  return '';
+}

@@ -63,3 +63,4 @@ class RequestCreate(BaseModel):
 
 class RequestStatusUpdate(BaseModel):
     status: Status = Field(..., examples=["Under Review"])
+    note: Optional[str] = Field(None, max_length=200, description="Optional note the student will see. Send an empty text to clear it.", examples=["Please bring a valid ID when you claim."])
