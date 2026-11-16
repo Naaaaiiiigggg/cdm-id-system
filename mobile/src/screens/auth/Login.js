@@ -7,10 +7,11 @@ import { signIn } from '../../services/auth';
 import { friendly } from '../../services/errors';
 import { common } from '../../theme';
 
-export default function Login({ onRegister, onForgot }) {
+// `notice` is a message to show right away, for example why the student was just signed out (suspended).
+export default function Login({ onRegister, onForgot, notice }) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState(notice || '');
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {

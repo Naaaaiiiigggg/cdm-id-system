@@ -1,5 +1,8 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { C } from '../theme';
+import { WEB_FONT, ensureInputStyle } from '../utils/webInput';
+
+ensureInputStyle();
 
 // Browser version of TimeField: the browser's own time picker (<input type="time">).
 // Same props as the phone version. value / onChange use "HH:MM" (24-hour). '' means "not set".
@@ -9,6 +12,8 @@ export default function TimeField({ label, value, onChange }) {
       <Text style={styles.lbl}>{label}</Text>
       <input
         type="time"
+        className={value ? 'cdm-input cdm-has' : 'cdm-input'}
+        data-ph="Select a time"
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         style={input}
@@ -28,7 +33,7 @@ const input = {
   minHeight: 46,
   padding: '10px 13px',
   fontSize: 14,
-  fontFamily: 'inherit',
+  fontFamily: WEB_FONT,
   color: C.ink,
   backgroundColor: C.sf,
   borderWidth: 1,

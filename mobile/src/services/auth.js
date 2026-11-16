@@ -2,8 +2,9 @@ import {
   EmailAuthProvider, deleteUser, linkWithCredential, sendPasswordResetEmail,
   signInAnonymously, signInWithEmailAndPassword, signOut,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { CLEARED, studentNotice, suspensionEnded } from '../utils/suspension';
 
 // While a student is registering, the app must not jump into the main screens
 // until the "Is this you?" confirmation has been shown.
@@ -16,9 +17,20 @@ export const finishRegistration = () => { registering = false; };
 export async function buildSession(user) {
   const snap = await getDoc(doc(db, 'users', user.uid));
   if (!snap.exists()) return null;
-  const p = snap.data();
+  let p = snap.data();
+  if (p.status === 'Suspended' && suspensionEnded(p)) {
+    // The suspension period is over: the student's own sign-in switches the account back on
+    // (firestore.rules allow this only when the end date has passed).
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { status: 'Active', ...CLEARED });
+      p = { ...p, status: 'Active' };
+    } catch (e) {
+      // Another sign-in check may have just done it: read the account again.
+      p = (await getDoc(doc(db, 'users', user.uid))).data();
+    }
+  }
   if (p.status !== 'Active') {
-    const e = new Error('Account suspended. Please contact the Registrar.');
+    const e = new Error(studentNotice(p));
     e.code = 'app/suspended';
     throw e;
   }

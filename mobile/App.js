@@ -1,14 +1,16 @@
-import { WideContext, useWideAdmin } from './src/utils/wide';
 import { Platform } from 'react-native';
 import WebFrame from './src/components/WebFrame';
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StatusBar as RNStatusBar, StyleSheet, View } from 'react-native';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 import { C } from './src/theme';
-import { auth } from './src/services/firebase';
+import { auth, db } from './src/services/firebase';
 import { buildSession, cancelRegistration, finishRegistration, isRegistering, signOutUser } from './src/services/auth';
+import { studentNotice } from './src/utils/suspension';
+import { WideContext, useWideAdmin } from './src/utils/wide';
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from './src/components/TabBar';
 import DialogHost from './src/components/DialogHost';
 
@@ -33,10 +35,11 @@ export default function App() {
   const [session, setSession] = useState(null);     // null or { uid, role, name, ... }
   const [screen, setScreen] = useState('splash');   // splash | login | register | forgot
   const [tab, setTab] = useState('home');
+  const [notice, setNotice] = useState('');         // shown on the sign-in screen (for example: you were suspended)
 
   const open = useCallback((s) => {
     setSession(s);
-    if (s) setTab(s.role === 'admin' ? 'dash' : 'home');
+    if (s) { setTab(s.role === 'admin' ? 'dash' : 'home'); setNotice(''); }
   }, []);
   const wide = useWideAdmin(session);
 
@@ -56,6 +59,26 @@ export default function App() {
     return stop;
   }, [open]);
 
+  // While someone is signed in, watch their account. If the Registrar suspends it,
+  // sign them out right away (without this they would stay in until they reload the page).
+  useEffect(() => {
+    if (!session?.uid) return undefined;
+    const stop = onSnapshot(
+      doc(db, 'users', session.uid),
+      (snap) => {
+        const p = snap.data();
+        if (p && p.status !== 'Active') {
+          setNotice(studentNotice(p));
+          setSession(null);
+          setScreen('login');
+          signOutUser();
+        }
+      },
+      () => {},
+    );
+    return stop;
+  }, [session?.uid]);
+
   // Called when a new student taps Continue on the "Is this you?" screen.
   const afterRegister = async () => {
     finishRegistration();
@@ -67,7 +90,7 @@ export default function App() {
     setScreen('login');
   };
 
-   if (booting) {
+  if (booting) {
     return (
       <WebFrame>
         <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
@@ -85,7 +108,7 @@ export default function App() {
     if (screen === 'splash') body = <Splash onNext={() => setScreen('login')} />;
     else if (screen === 'register') body = <Register onDone={afterRegister} onBack={async () => { await cancelRegistration(); setScreen('login'); }} />;
     else if (screen === 'forgot') body = <ForgotPassword onBack={() => setScreen('login')} />;
-    else body = <Login onRegister={() => setScreen('register')} onForgot={() => setScreen('forgot')} />;
+    else body = <Login notice={notice} onRegister={() => setScreen('register')} onForgot={() => setScreen('forgot')} />;
   } else if (session.role === 'admin') {
     tabs = ADMIN_TABS;
     body = {
@@ -106,7 +129,7 @@ export default function App() {
   }
 
   const onSplash = screen === 'splash' && !session;
-   return (
+  return (
     <WebFrame wide={wide}>
       <WideContext.Provider value={wide}>
         <View style={[styles.root, onSplash && { backgroundColor: C.g9 }, wide && { flexDirection: 'row' }]}>

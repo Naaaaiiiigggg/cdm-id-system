@@ -1,78 +1,126 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Page from '../../components/Page';
 import Card from '../../components/Card';
 import Pill from '../../components/Pill';
+import AccountModal from '../../components/AccountModal';
 import useLoad from '../../utils/useLoad';
-import { listAccounts, setAccountStatus } from '../../services/students';
-import { sendReset } from '../../services/auth';
-import { friendly } from '../../services/errors';
-import { confirmDialog, notify } from '../../utils/dialog';
-import { C, common } from '../../theme';
+import { listAccounts } from '../../services/students';
 import { useWide } from '../../utils/wide';
+import { fmtLong } from '../../utils/suspension';
+import { C, common } from '../../theme';
+
+const FILTERS = ['All', 'Active', 'Suspended', 'Not registered'];
+
+// "Permanent" / "Until December 1, 2026" under a suspended student's status
+const suspendedNote = (a) => {
+  const s = a.suspension;
+  if (!s) return '';
+  return s.permanent ? 'Permanent' : s.until ? `Until ${fmtLong(s.until)}` : '';
+};
 
 export default function AdminAccounts() {
   const wide = useWide();
   const load = useLoad(listAccounts, []);
-  const list = load.data || [];
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [sel, setSel] = useState(null);
 
-  const toggle = async (a) => {
-    const next = a.status === 'Active' ? 'Suspended' : 'Active';
-    const ok = await confirmDialog({
-      title: `${next === 'Suspended' ? 'Suspend' : 'Reactivate'} account`,
-      message: `${a.name} (${a.studentNo})`,
-      confirmText: 'Confirm',
-      destructive: next === 'Suspended',
-    });
-    if (!ok) return;
-    try {
-      await setAccountStatus(a.uid, next);
-      load.reload();
-    } catch (e) {
-      notify('Error', friendly(e));
-    }
-  };
-
-  const reset = async (a) => {
-    try {
-      await sendReset(a.email);
-      notify('Sent', `A reset link was sent to ${a.email}.`);
-    } catch (e) {
-      notify('Error', friendly(e));
-    }
-  };
+  const all = load.data || [];
+  const count = (f) => (f === 'All' ? all.length : all.filter((a) => a.status === f).length);
+  const needle = q.trim().toLowerCase();
+  const list = all.filter((a) => {
+    if (filter !== 'All' && a.status !== filter) return false;
+    if (!needle) return true;
+    return [a.name, a.studentNo, a.email, a.program].some((v) => (v || '').toLowerCase().includes(needle));
+  });
+  // keep the pop-up showing the freshest copy of the selected student
+  const current = sel ? all.find((a) => a.studentNo === sel.studentNo) || sel : null;
 
   return (
     <Page title="Accounts" load={load}>
-      {list.length === 0 && <Card><Text style={common.mu}>No students on the Registrar list yet.</Text></Card>}
-      <View style={wide ? styles.grid : null}>
-      {list.map((a) => (
-       <Card key={a.studentNo} style={wide ? styles.half : null}>
-          <View style={common.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Text style={common.bold}>{a.name}</Text>
-              <Text style={common.mu}>{a.studentNo} · {a.program}{a.email ? ` · ${a.email}` : ''}</Text>
-            </View>
-            <Pill s={a.status} />
-          </View>
-          {a.uid ? (
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.act} onPress={() => reset(a)}><Text style={styles.actTx}>Send reset link</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.act} onPress={() => toggle(a)}>
-                <Text style={[styles.actTx, a.status === 'Active' && { color: C.bad }]}>{a.status === 'Active' ? 'Suspend' : 'Reactivate'}</Text>
-              </TouchableOpacity>
+      <TextInput
+        style={[styles.search, wide && { maxWidth: 520 }]} placeholder="Search name, student no. or email"
+        placeholderTextColor="#9AA89F" value={q} onChangeText={setQ}
+      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
+        {FILTERS.map((f) => (
+          <TouchableOpacity key={f} style={[styles.chip, filter === f && styles.chipOn]} onPress={() => setFilter(f)}>
+            <Text style={[styles.chipTx, filter === f && { color: '#fff' }]}>{f} ({count(f)})</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <Text style={[common.mu, { marginTop: 12 }]}>{list.length} student{list.length === 1 ? '' : 's'} · tap one to see their account</Text>
+
+      {list.length === 0 ? (
+        <Card><Text style={common.mu}>{all.length === 0 ? 'No students on the Registrar list yet.' : 'No students match.'}</Text></Card>
+      ) : (
+        <Card style={{ paddingVertical: 4, paddingHorizontal: 0 }}>
+          {wide ? (
+            <View style={[common.listRow, styles.head]}>
+              <Text style={[styles.hd, { flex: 3 }]}>NAME</Text>
+              <Text style={[styles.hd, { flex: 1.3 }]}>STUDENT NO.</Text>
+              <Text style={[styles.hd, { flex: 1.5 }]}>PROGRAM</Text>
+              <Text style={[styles.hd, { flex: 2 }]}>STATUS</Text>
+              <View style={{ width: 18 }} />
             </View>
           ) : null}
+          {list.map((a, i) => (
+            <Pressable
+              key={a.studentNo}
+              onPress={() => setSel(a)}
+              style={({ pressed, hovered }) => [
+                common.listRow,
+                { paddingHorizontal: 14 },
+                i === list.length - 1 && { borderBottomWidth: 0 },
+                (pressed || hovered) && { backgroundColor: C.g1 },
+              ]}
+            >
+              {wide ? (
+                <>
+                  <View style={{ flex: 3 }}>
+                    <Text style={common.bold}>{a.name}</Text>
+                    {a.email ? <Text style={common.mu}>{a.email}</Text> : null}
+                  </View>
+                  <Text style={[common.mu, { flex: 1.3 }]}>{a.studentNo}</Text>
+                  <Text style={[common.mu, { flex: 1.5 }]}>{a.program}{a.yearLevel ? ` · ${a.yearLevel}` : ''}</Text>
+                  <View style={{ flex: 2, gap: 3 }}>
+                    <Pill s={a.status} />
+                    {suspendedNote(a) ? <Text style={common.mu}>{suspendedNote(a)}</Text> : null}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={common.bold}>{a.name}</Text>
+                    <Text style={common.mu}>{a.studentNo} · {a.program}</Text>
+                    {suspendedNote(a) ? <Text style={common.mu}>{suspendedNote(a)}</Text> : null}
+                  </View>
+                  <Pill s={a.status} />
+                </>
+              )}
+              <Feather name="chevron-right" size={18} color={C.mu} />
+            </Pressable>
+          ))}
         </Card>
-      ))}
-      </View>
+      )}
+
+      <AccountModal
+        account={current}
+        onClose={() => setSel(null)}
+        onChanged={() => { setSel(null); load.reload(); }}
+      />
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  act: { flex: 1, borderWidth: 1, borderColor: C.ln, borderRadius: 10, paddingVertical: 9, alignItems: 'center' },
-  actTx: { fontSize: 12, fontWeight: '700', color: C.g7 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12 },
-  half: { width: '49%' },
+  search: { backgroundColor: C.sf, borderWidth: 1, borderColor: C.ln, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, fontSize: 14, color: C.ink, marginTop: 12 },
+  chip: { borderWidth: 1, borderColor: C.ln, backgroundColor: C.sf, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 13 },
+  chipOn: { backgroundColor: C.g9, borderColor: C.g9 },
+  chipTx: { fontSize: 12, fontWeight: '700', color: C.ink },
+  head: { paddingHorizontal: 14, paddingVertical: 9, backgroundColor: C.g1 },
+  hd: { fontSize: 11, fontWeight: '800', color: C.mu, letterSpacing: 0.8 },
 });
