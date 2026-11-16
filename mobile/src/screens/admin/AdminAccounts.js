@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Page from '../../components/Page';
 import Card from '../../components/Card';
 import Pill from '../../components/Pill';
@@ -6,31 +6,36 @@ import useLoad from '../../utils/useLoad';
 import { listAccounts, setAccountStatus } from '../../services/students';
 import { sendReset } from '../../services/auth';
 import { friendly } from '../../services/errors';
+import { confirmDialog, notify } from '../../utils/dialog';
 import { C, common } from '../../theme';
 
 export default function AdminAccounts() {
   const load = useLoad(listAccounts, []);
   const list = load.data || [];
 
-  const toggle = (a) => {
+  const toggle = async (a) => {
     const next = a.status === 'Active' ? 'Suspended' : 'Active';
-    Alert.alert(`${next === 'Suspended' ? 'Suspend' : 'Reactivate'} account`, `${a.name} (${a.studentNo})`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          try { await setAccountStatus(a.uid, next); load.reload(); } catch (e) { Alert.alert('Error', friendly(e)); }
-        },
-      },
-    ]);
+    const ok = await confirmDialog({
+      title: `${next === 'Suspended' ? 'Suspend' : 'Reactivate'} account`,
+      message: `${a.name} (${a.studentNo})`,
+      confirmText: 'Confirm',
+      destructive: next === 'Suspended',
+    });
+    if (!ok) return;
+    try {
+      await setAccountStatus(a.uid, next);
+      load.reload();
+    } catch (e) {
+      notify('Error', friendly(e));
+    }
   };
 
   const reset = async (a) => {
     try {
       await sendReset(a.email);
-      Alert.alert('Sent', `A reset link was sent to ${a.email}.`);
+      notify('Sent', `A reset link was sent to ${a.email}.`);
     } catch (e) {
-      Alert.alert('Error', friendly(e));
+      notify('Error', friendly(e));
     }
   };
 

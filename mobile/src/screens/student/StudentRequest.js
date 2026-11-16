@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Page from '../../components/Page';
 import Card from '../../components/Card';
@@ -11,6 +11,7 @@ import Pill from '../../components/Pill';
 import useLoad from '../../utils/useLoad';
 import { activeRequest, getMediaAndRequests, saveMySignature, submitRequest } from '../../services/requests';
 import { friendly } from '../../services/errors';
+import { confirmDialog } from '../../utils/dialog';
 import { C, common } from '../../theme';
 
 const TYPES = ['New ID', 'Replacement'];
@@ -56,29 +57,23 @@ export default function StudentRequest({ me, go }) {
     setStep(signature ? 'review' : 'sign');
   };
 
-  const saveSignature = () => {
+  const saveSignature = async () => {
     if (!drawn) return setErr('Please sign inside the box first.');
-    Alert.alert(
-      'Save your signature?',
-      'It will be printed on your ID. After this, only the Registrar can change it.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: async () => {
-            setBusy(true);
-            setErr('');
-            try {
-              setSavedSig(await saveMySignature(me.studentNo, drawn));
-              setStep('review');
-            } catch (e) {
-              setErr(friendly(e));
-            }
-            setBusy(false);
-          },
-        },
-      ],
-    );
+    const ok = await confirmDialog({
+      title: 'Save your signature?',
+      message: 'It will be printed on your ID. After this, only the Registrar can change it.',
+      confirmText: 'Save',
+    });
+    if (!ok) return;
+    setBusy(true);
+    setErr('');
+    try {
+      setSavedSig(await saveMySignature(me.studentNo, drawn));
+      setStep('review');
+    } catch (e) {
+      setErr(friendly(e));
+    }
+    setBusy(false);
   };
 
   const submit = async () => {

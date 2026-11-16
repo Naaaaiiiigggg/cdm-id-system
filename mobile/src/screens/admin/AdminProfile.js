@@ -1,15 +1,20 @@
-import { Alert, ScrollView, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 import Card from '../../components/Card';
 import KV from '../../components/KV';
 import Btn from '../../components/Btn';
+import { confirmDialog } from '../../utils/dialog';
 import { common } from '../../theme';
 
 export default function AdminProfile({ me, onLogout }) {
-  const confirmLogout = () =>
-    Alert.alert('Sign out', 'Do you want to sign out of the admin account?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: onLogout },
-    ]);
+  const confirmLogout = async () => {
+    const ok = await confirmDialog({
+      title: 'Sign out',
+      message: 'Do you want to sign out of the admin account?',
+      confirmText: 'Sign out',
+      destructive: true,
+    });
+    if (ok) onLogout();
+  };
 
   return (
     <ScrollView contentContainerStyle={common.pad}>

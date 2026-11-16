@@ -7,6 +7,7 @@ import { C } from './src/theme';
 import { auth } from './src/services/firebase';
 import { buildSession, cancelRegistration, finishRegistration, isRegistering, signOutUser } from './src/services/auth';
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from './src/components/TabBar';
+import DialogHost from './src/components/DialogHost';
 
 import Splash from './src/screens/auth/Splash';
 import Login from './src/screens/auth/Login';
@@ -104,6 +105,7 @@ export default function App() {
       <StatusBar style={onSplash ? 'light' : 'dark'} />
       <View style={{ flex: 1 }}>{body}</View>
       {tabs && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
+      <DialogHost />
     </View>
   );
 }
