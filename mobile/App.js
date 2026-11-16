@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import WebFrame from './src/components/WebFrame';
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StatusBar as RNStatusBar, StyleSheet, View } from 'react-native';
@@ -63,12 +65,14 @@ export default function App() {
     setScreen('login');
   };
 
-  if (booting) {
+   if (booting) {
     return (
-      <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
-        <StatusBar style="light" />
-        <ActivityIndicator color={C.gold} size="large" />
-      </View>
+      <WebFrame>
+        <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
+          <StatusBar style="light" />
+          <ActivityIndicator color={C.gold} size="large" />
+        </View>
+      </WebFrame>
     );
   }
 
@@ -101,15 +105,17 @@ export default function App() {
 
   const onSplash = screen === 'splash' && !session;
   return (
-    <View style={[styles.root, onSplash && { backgroundColor: C.g9 }]}>
-      <StatusBar style={onSplash ? 'light' : 'dark'} />
-      <View style={{ flex: 1 }}>{body}</View>
-      {tabs && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
-      <DialogHost />
-    </View>
+    <WebFrame>
+     <View style={[styles.root, onSplash && { backgroundColor: C.g9 }]}>
+       <StatusBar style={onSplash ? 'light' : 'dark'} />
+       <View style={{ flex: 1 }}>{body}</View>
+       {tabs && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
+       <DialogHost />
+     </View>
+   </WebFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, paddingTop: RNStatusBar.currentHeight || 44 },
+  root: { flex: 1, backgroundColor: C.bg, paddingTop: Platform.OS === 'web' ? 0 : (RNStatusBar.currentHeight || 44) },
 });

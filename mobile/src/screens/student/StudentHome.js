@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   previewBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.g9, borderRadius: 12, paddingVertical: 12, marginTop: 12 },
   previewTx: { color: '#fff', fontWeight: '700', fontSize: 14 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 16 },
-  sheet: { backgroundColor: C.bg, borderRadius: 20, padding: 16 },
+  sheet: { backgroundColor: C.bg, borderRadius: 20, padding: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
   sheetTitle: { fontSize: 18, fontWeight: '800', color: C.ink },
   seg: { flexDirection: 'row', backgroundColor: C.g1, borderRadius: 12, padding: 4, marginTop: 12 },
   segBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
