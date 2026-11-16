@@ -5,11 +5,13 @@ import Card from '../../components/Card';
 import ReqList from '../../components/ReqList';
 import ManageRequestModal from '../../components/ManageRequestModal';
 import useLoad from '../../utils/useLoad';
+import { useWide } from '../../utils/wide';
 import { getAdminData } from '../../services/requests';
 import { C, common } from '../../theme';
 
 export default function AdminDashboard() {
   const load = useLoad(getAdminData, []);
+  const wide = useWide();
   const [sel, setSel] = useState(null);
   const reqs = load.data?.requests || [];
   const count = (s) => reqs.filter((r) => r.status === s).length;
@@ -19,7 +21,7 @@ export default function AdminDashboard() {
     <Page title="Dashboard" load={load}>
       <View style={styles.grid}>
         {['Submitted', 'Under Review', 'For Printing', 'Ready for Pickup'].map((s) => (
-          <Card key={s} style={styles.kpi}>
+          <Card key={s} style={[styles.kpi, wide && { flexBasis: 180 }]}>
             <Text style={styles.num}>{count(s)}</Text>
             <Text style={common.mu}>{s}</Text>
           </Card>
@@ -39,6 +41,6 @@ export default function AdminDashboard() {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  kpi: { width: '48%', marginTop: 8 },
+  kpi: { flexGrow: 1, flexBasis: '45%', marginTop: 8 },
   num: { fontSize: 26, fontWeight: '800', color: C.g7 },
 });

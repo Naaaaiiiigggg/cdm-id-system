@@ -1,20 +1,20 @@
 import { View } from 'react-native';
 
-// Browser version: keeps the app in a phone-width column in the middle of the page.
-// On a phone browser (narrow screen) the column is the full width, so nothing changes.
-// Step 5 (wider admin layout) will build on this file.
+// Browser version. Normally keeps the app in a phone-width column in the middle of the page.
+// With wide={true} (the admin on a wide window) it lets the app use the whole window instead.
+// The structure is the same in both cases, so resizing the window does not rebuild the screens.
 export const COLUMN_W = 480;
 
-export default function WebFrame({ children }) {
+export default function WebFrame({ children, wide }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#DCE5E0' }}>
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: wide ? '#F4F7F5' : '#DCE5E0' }}>
       <View
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: COLUMN_W,
+          maxWidth: wide ? '100%' : COLUMN_W,
           overflow: 'hidden',
-          boxShadow: '0 0 40px rgba(14, 59, 42, 0.18)',
+          boxShadow: wide ? 'none' : '0 0 40px rgba(14, 59, 42, 0.18)',
         }}
       >
         {children}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Fragment, useEffect, useState } from 'react';
+import { Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Pill from './Pill';
 import Btn from './Btn';
@@ -13,6 +13,7 @@ import { friendly } from '../services/errors';
 import { formatDate, shortDate, todayStr } from '../utils/format';
 import { programName } from '../data/programs';
 import { REJECT_REASONS, TEMPLATES } from '../data/templates';
+import { useWide } from '../utils/wide';
 import { C, STATUSES, common } from '../theme';
 
 const MAX_NOTE = 200;
@@ -41,6 +42,8 @@ const Chips = ({ items, onPick }) => (
 // The main button moves it to the next stage in one tap. "Choose a different stage" is the fallback.
 // request = the request document, student = that student's Registrar record.
 export default function ManageRequestModal({ request, student = {}, onClose, onSaved }) {
+  const wide = useWide();
+  const { height: winH } = useWindowDimensions();
   const [mode, setMode] = useState('move'); // move | reject
   const [status, setStatus] = useState('');
   const [note, setNote] = useState('');
@@ -130,12 +133,46 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
   const label = busy ? 'Saving…' : moving ? (request.status === 'Rejected' ? `Reopen as ${status} →` : `Move to ${status} →`) : 'Save changes';
   const off = busy || !changed || blocked;
 
+  const sideBySide = wide && showId;
+  const Row = sideBySide ? View : Fragment;
+  const rowProps = sideBySide ? { style: { flexShrink: 1, flexDirection: 'row', gap: 20 } } : {};
+  const previewBlock = showId ? (
+                <View style={{ marginTop: 6 }}>
+                  {sideBySide ? null : (
+                  <View style={[styles.seg, sideBySide && { alignSelf: 'center', width: 200, marginTop: 14 }]}>
+                    {['front', 'back'].map((sd) => (
+                      <TouchableOpacity key={sd} style={[styles.segBtn, sideBySide && { paddingVertical: 6 }, side === sd && styles.segOn]} onPress={() => setSide(sd)}>
+                        <Text style={[styles.segTx, side === sd && { color: C.ink }]}>{sd === 'front' ? 'Front' : 'Back'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  )}
+                  {side === 'front'
+                    ? <IdCard name={student.name || request.studentNo} studentNo={request.studentNo} program={student.program} photo={student.photo} signature={sig || null} />
+                    : <IdCardBack info={student} />}
+                  {sideBySide ? (
+                  <View style={[styles.seg, sideBySide && { alignSelf: 'center', width: 200, marginTop: 14 }]}>
+                    {['front', 'back'].map((sd) => (
+                      <TouchableOpacity key={sd} style={[styles.segBtn, sideBySide && { paddingVertical: 6 }, side === sd && styles.segOn]} onPress={() => setSide(sd)}>
+                        <Text style={[styles.segTx, side === sd && { color: C.ink }]}>{sd === 'front' ? 'Front' : 'Back'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  ) : null}
+                  {sig !== undefined && missing.length ? (
+                    <View style={[common.note, { marginBottom: 0 }]}>
+                      <Text style={common.noteTx}>Not ready to print: {missing.join(' and ')}.</Text>
+                    </View>
+                  ) : null}
+                </View>
+  ) : null;
+
   return (
     <Modal visible transparent animationType="slide" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, wide && { justifyContent: 'center' }]}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.kav}>
-          <View style={styles.sheet}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.kav, wide && { maxWidth: sideBySide ? 940 : 640 }]}>
+          <View style={[styles.sheet, { maxHeight: winH * 0.92 }, wide && { borderRadius: 22 }]}>
             <View style={common.rowBetween}>
               <View>
                 <Text style={styles.title}>Manage request</Text>
@@ -146,7 +183,8 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
               </TouchableOpacity>
             </View>
 
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
+            <Row {...rowProps}>
+            <ScrollView style={sideBySide ? { flex: 1 } : undefined} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
               {/* student + request details */}
               <View style={styles.box}>
                 <Text style={common.bold}>{student.name || request.studentNo}</Text>
@@ -167,25 +205,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                 <Feather name={showId ? 'eye-off' : 'eye'} size={16} color="#fff" />
                 <Text style={styles.previewTx}>{showId ? 'Hide ID preview' : 'Preview ID'}</Text>
               </TouchableOpacity>
-              {showId ? (
-                <View style={{ marginTop: 6 }}>
-                  <View style={styles.seg}>
-                    {['front', 'back'].map((sd) => (
-                      <TouchableOpacity key={sd} style={[styles.segBtn, side === sd && styles.segOn]} onPress={() => setSide(sd)}>
-                        <Text style={[styles.segTx, side === sd && { color: C.ink }]}>{sd === 'front' ? 'Front' : 'Back'}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {side === 'front'
-                    ? <IdCard name={student.name || request.studentNo} studentNo={request.studentNo} program={student.program} photo={student.photo} signature={sig || null} />
-                    : <IdCardBack info={student} />}
-                  {sig !== undefined && missing.length ? (
-                    <View style={[common.note, { marginBottom: 0 }]}>
-                      <Text style={common.noteTx}>Not ready to print: {missing.join(' and ')}.</Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
+              {!sideBySide ? previewBlock : null}
 
               {mode === 'reject' ? (
                 /* ---------------- reject ---------------- */
@@ -275,6 +295,12 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                 </>
               )}
             </ScrollView>
+            {sideBySide ? (
+              <ScrollView style={{ width: 330, flexGrow: 0, flexShrink: 0 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
+                {previewBlock}
+              </ScrollView>
+            ) : null}
+            </Row>
           </View>
         </KeyboardAvoidingView>
       </View>

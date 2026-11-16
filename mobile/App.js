@@ -1,3 +1,4 @@
+import { WideContext, useWideAdmin } from './src/utils/wide';
 import { Platform } from 'react-native';
 import WebFrame from './src/components/WebFrame';
 import { useCallback, useEffect, useState } from 'react';
@@ -37,6 +38,7 @@ export default function App() {
     setSession(s);
     if (s) setTab(s.role === 'admin' ? 'dash' : 'home');
   }, []);
+  const wide = useWideAdmin(session);
 
   // Firebase tells us whenever someone signs in or out (and restores the last session).
   useEffect(() => {
@@ -104,18 +106,27 @@ export default function App() {
   }
 
   const onSplash = screen === 'splash' && !session;
-  return (
-    <WebFrame>
-     <View style={[styles.root, onSplash && { backgroundColor: C.g9 }]}>
-       <StatusBar style={onSplash ? 'light' : 'dark'} />
-       <View style={{ flex: 1 }}>{body}</View>
-       {tabs && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
-       <DialogHost />
-     </View>
-   </WebFrame>
+   return (
+    <WebFrame wide={wide}>
+      <WideContext.Provider value={wide}>
+        <View style={[styles.root, onSplash && { backgroundColor: C.g9 }, wide && { flexDirection: 'row' }]}>
+          <StatusBar style={onSplash ? 'light' : 'dark'} />
+          {tabs && wide && <TabBar side tabs={tabs} tab={tab} setTab={setTab} />}
+          {wide ? (
+            <View style={styles.main}><View style={styles.content}>{body}</View></View>
+          ) : (
+            <View style={{ flex: 1 }}>{body}</View>
+          )}
+          {tabs && !wide && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
+          <DialogHost />
+        </View>
+      </WideContext.Provider>
+    </WebFrame>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingTop: Platform.OS === 'web' ? 0 : (RNStatusBar.currentHeight || 44) },
+  main: { flex: 1, alignItems: 'center' },
+  content: { flex: 1, width: '100%', maxWidth: 1100 },
 });

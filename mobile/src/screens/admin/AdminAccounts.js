@@ -8,8 +8,10 @@ import { sendReset } from '../../services/auth';
 import { friendly } from '../../services/errors';
 import { confirmDialog, notify } from '../../utils/dialog';
 import { C, common } from '../../theme';
+import { useWide } from '../../utils/wide';
 
 export default function AdminAccounts() {
+  const wide = useWide();
   const load = useLoad(listAccounts, []);
   const list = load.data || [];
 
@@ -42,8 +44,9 @@ export default function AdminAccounts() {
   return (
     <Page title="Accounts" load={load}>
       {list.length === 0 && <Card><Text style={common.mu}>No students on the Registrar list yet.</Text></Card>}
+      <View style={wide ? styles.grid : null}>
       {list.map((a) => (
-        <Card key={a.studentNo}>
+       <Card key={a.studentNo} style={wide ? styles.half : null}>
           <View style={common.rowBetween}>
             <View style={{ flex: 1 }}>
               <Text style={common.bold}>{a.name}</Text>
@@ -61,6 +64,7 @@ export default function AdminAccounts() {
           ) : null}
         </Card>
       ))}
+      </View>
     </Page>
   );
 }
@@ -69,4 +73,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   act: { flex: 1, borderWidth: 1, borderColor: C.ln, borderRadius: 10, paddingVertical: 9, alignItems: 'center' },
   actTx: { fontSize: 12, fontWeight: '700', color: C.g7 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12 },
+  half: { width: '49%' },
 });
