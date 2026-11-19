@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Field from '../../components/Field';
+import AuthShell from '../../components/AuthShell';
 import DateField from '../../components/DateField';
 import Btn from '../../components/Btn';
 import Card from '../../components/Card';
@@ -65,20 +66,20 @@ export default function Register({ onDone, onBack }) {
 
   if (step === 1) {
     return (
-      <ScrollView contentContainerStyle={common.pad} keyboardShouldPersistTaps="handled">
+      <AuthShell>
         <Back onPress={onBack} title="Create account" />
         <Text style={common.mu}>Enter your student number and birthdate. We check them against the Registrar list.</Text>
         <Field label="Student number" placeholder="e.g. 24-66298" value={num} onChangeText={(t) => setNum(formatStudentNo(t))} />
         <DateField label="Birthdate" placeholder="Select your birthdate" value={bd} onChange={setBd} />
         <Text style={common.err}>{err}</Text>
         <Btn title={busy ? 'Checking…' : 'Verify with Registrar'} onPress={busy ? () => {} : verify} />
-      </ScrollView>
+      </AuthShell>
     );
   }
 
   if (step === 2) {
     return (
-      <ScrollView contentContainerStyle={common.pad}>
+      <AuthShell>
         <Back onPress={() => setStep(1)} title="Is this you?" />
         <Card>
           <KV k="Name" v={rec.name} />
@@ -95,12 +96,12 @@ export default function Register({ onDone, onBack }) {
         <Text style={[common.mu, { marginTop: 10 }]}>These details come from the Registrar and cannot be edited here.</Text>
         <Btn title="Yes, this is me" onPress={() => { setErr(''); setStep(3); }} />
         <Btn title="No, go back" kind="ghost" onPress={() => setStep(1)} />
-      </ScrollView>
+      </AuthShell>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={common.pad} keyboardShouldPersistTaps="handled">
+    <AuthShell>
       <Back onPress={() => { setErr(''); setStep(2); }} title="Your login" />
       <Text style={common.mu}>You will sign in with this email, and we will send password reset links to it.</Text>
       <Field label="Personal email" placeholder="e.g. yourname@gmail.com" keyboardType="email-address" value={em} onChangeText={setEm} />
@@ -121,6 +122,6 @@ export default function Register({ onDone, onBack }) {
       {p2.length > 0 && p1 !== p2 ? <Text style={{ fontSize: 12, color: C.bad, marginTop: 6 }}>Passwords do not match yet.</Text> : null}
       <Text style={common.err}>{err}</Text>
       <Btn title={busy ? 'Creating account…' : 'Create account'} onPress={busy ? () => {} : create} />
-    </ScrollView>
+    </AuthShell>
   );
 }

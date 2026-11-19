@@ -7,14 +7,14 @@ export const STUDENT_TABS = [['home', 'home', 'Home'], ['req', 'file-text', 'Req
 export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requests'], ['print', 'printer', 'Print'], ['accts', 'users', 'Accounts'], ['aprof', 'user', 'Profile']];
 
 // Bottom bar on phones and narrow windows. With side={true} (admin, wide browser window) it is a side menu.
-export default function TabBar({ tabs, tab, setTab, side }) {
+export default function TabBar({ tabs, tab, setTab, side, subtitle = 'Registrar' }) {
   if (side) {
     return (
       <View style={styles.side}>
         <View style={styles.brand}>
           <Text style={styles.brandSm}>COLEGIO DE MONTALBAN</Text>
           <Text style={styles.brandH}>ID System</Text>
-          <Text style={styles.brandSub}>Registrar</Text>
+          <Text style={styles.brandSub}>{subtitle}</Text>
         </View>
         {tabs.map(([key, icon, label]) => {
           const on = tab === key;

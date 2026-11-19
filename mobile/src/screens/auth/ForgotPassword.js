@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Field from '../../components/Field';
+import AuthShell from '../../components/AuthShell';
 import Btn from '../../components/Btn';
 import { sendReset } from '../../services/auth';
 import { friendly } from '../../services/errors';
@@ -27,13 +28,13 @@ export default function ForgotPassword({ onBack }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={common.pad} keyboardShouldPersistTaps="handled">
+    <AuthShell>
       <View style={common.hd}>
         <TouchableOpacity style={common.bk} onPress={onBack}><Text style={common.bkTx}>‹</Text></TouchableOpacity>
         <Text style={common.h2}>Forgot password</Text>
       </View>
       <Text style={common.mu}>Enter the personal email you registered with. We will send you a link to set a new password.</Text>
-      <Field label="Personal email" placeholder="you@example.com" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <Field label="Personal email" placeholder="username@domain.com" keyboardType="email-address" value={email} onChangeText={setEmail} />
       <Text style={common.err}>{err}</Text>
       {sent ? (
         <View style={common.note}>
@@ -41,6 +42,6 @@ export default function ForgotPassword({ onBack }) {
         </View>
       ) : null}
       <Btn title={busy ? 'Sending…' : 'Send reset link'} onPress={busy ? () => {} : send} />
-    </ScrollView>
+    </AuthShell>
   );
 }

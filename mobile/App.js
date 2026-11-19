@@ -10,7 +10,7 @@ import { C } from './src/theme';
 import { auth, db } from './src/services/firebase';
 import { buildSession, cancelRegistration, finishRegistration, isRegistering, signOutUser } from './src/services/auth';
 import { studentNotice } from './src/utils/suspension';
-import { WideContext, useWideAdmin } from './src/utils/wide';
+import { WideContext, useWideMode } from './src/utils/wide';
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from './src/components/TabBar';
 import DialogHost from './src/components/DialogHost';
 
@@ -41,7 +41,7 @@ export default function App() {
     setSession(s);
     if (s) { setTab(s.role === 'admin' ? 'dash' : 'home'); setNotice(''); }
   }, []);
-  const wide = useWideAdmin(session);
+  const { wide, authWide } = useWideMode(session); // wide: signed in on a wide window; authWide: not signed in, wide window
 
   // Firebase tells us whenever someone signs in or out (and restores the last session).
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function App() {
 
   if (booting) {
     return (
-      <WebFrame>
+      <WebFrame wide={authWide}>
         <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
           <StatusBar style="light" />
           <ActivityIndicator color={C.gold} size="large" />
@@ -104,10 +104,13 @@ export default function App() {
   let body;
   let tabs = null;
 
+  // On a wide window the sign-in screen already shows the brand panel, so skip the splash.
+  const view = authWide && screen === 'splash' ? 'login' : screen;
+
   if (!session) {
-    if (screen === 'splash') body = <Splash onNext={() => setScreen('login')} />;
-    else if (screen === 'register') body = <Register onDone={afterRegister} onBack={async () => { await cancelRegistration(); setScreen('login'); }} />;
-    else if (screen === 'forgot') body = <ForgotPassword onBack={() => setScreen('login')} />;
+    if (view === 'splash') body = <Splash onNext={() => setScreen('login')} />;
+    else if (view === 'register') body = <Register onDone={afterRegister} onBack={async () => { await cancelRegistration(); setScreen('login'); }} />;
+    else if (view === 'forgot') body = <ForgotPassword onBack={() => setScreen('login')} />;
     else body = <Login notice={notice} onRegister={() => setScreen('register')} onForgot={() => setScreen('forgot')} />;
   } else if (session.role === 'admin') {
     tabs = ADMIN_TABS;
@@ -128,15 +131,15 @@ export default function App() {
     }[tab];
   }
 
-  const onSplash = screen === 'splash' && !session;
+  const onSplash = view === 'splash' && !session;
   return (
-    <WebFrame wide={wide}>
+    <WebFrame wide={wide || authWide}>
       <WideContext.Provider value={wide}>
         <View style={[styles.root, onSplash && { backgroundColor: C.g9 }, wide && { flexDirection: 'row' }]}>
           <StatusBar style={onSplash ? 'light' : 'dark'} />
-          {tabs && wide && <TabBar side tabs={tabs} tab={tab} setTab={setTab} />}
+          {tabs && wide && <TabBar side tabs={tabs} tab={tab} setTab={setTab} subtitle={session.role === 'admin' ? 'Registrar' : 'Student'} />}
           {wide ? (
-            <View style={styles.main}><View style={styles.content}>{body}</View></View>
+            <View style={styles.main}><View style={[styles.content, session.role !== 'admin' && { maxWidth: 860 }]}>{body}</View></View>
           ) : (
             <View style={{ flex: 1 }}>{body}</View>
           )}

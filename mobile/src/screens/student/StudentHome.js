@@ -9,6 +9,7 @@ import KV from '../../components/KV';
 import IdCard from '../../components/IdCard';
 import IdCardBack from '../../components/IdCardBack';
 import useLoad from '../../utils/useLoad';
+import { useWide } from '../../utils/wide';
 import { getMediaAndRequests } from '../../services/requests';
 import { formatDate, shortDate, timeRange, weekdayDate } from '../../utils/format';
 import { C, PILL, STATUSES, common } from '../../theme';
@@ -36,6 +37,7 @@ const greeting = () => {
 
 export default function StudentHome({ me, go }) {
   const load = useLoad(() => getMediaAndRequests(me), [me.uid]);
+  const wide = useWide();
   const [showSteps, setShowSteps] = useState(false);
   const [side, setSide] = useState('front');
   const [preview, setPreview] = useState(false); // the ID preview pop-up
@@ -63,7 +65,8 @@ export default function StudentHome({ me, go }) {
         </View>
       </View>
 
-      {/* ---------- request status ---------- */}
+      <View style={wide ? styles.cols : null}>
+        <View style={wide ? styles.colMain : null}>
       <Text style={[common.h3, { marginTop: 20 }]}>My ID request</Text>
       {r ? (
         <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -119,10 +122,12 @@ export default function StudentHome({ me, go }) {
               <KV k="Submitted" v={formatDate(r.createdAt)} />
             </View>
 
-            <TouchableOpacity style={styles.previewBtn} onPress={() => { setSide('front'); setPreview(true); }} activeOpacity={0.85}>
-              <Feather name="eye" size={16} color="#fff" />
-              <Text style={styles.previewTx}>Preview ID</Text>
-            </TouchableOpacity>
+            {wide ? null : (
+              <TouchableOpacity style={styles.previewBtn} onPress={() => { setSide('front'); setPreview(true); }} activeOpacity={0.85}>
+                <Feather name="eye" size={16} color="#fff" />
+                <Text style={styles.previewTx}>Preview ID</Text>
+              </TouchableOpacity>
+            )}
 
             {idx >= 0 ? (
               <>
@@ -165,6 +170,30 @@ export default function StudentHome({ me, go }) {
           <Btn title="Request an ID" onPress={() => go('req')} />
         </Card>
       )}
+        </View>
+        {wide && r ? (
+          <View style={styles.colSide}>
+            <Text style={[common.h3, { marginTop: 20 }]}>Your ID</Text>
+            <Card>
+              <View style={[styles.seg, { marginTop: 0 }]}>
+                {['front', 'back'].map((sd) => (
+                  <TouchableOpacity key={sd} style={[styles.segBtn, side === sd && styles.segOn]} onPress={() => setSide(sd)}>
+                    <Text style={[styles.segTx, side === sd && { color: C.ink }]}>{sd === 'front' ? 'Front' : 'Back'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ alignItems: 'center', marginTop: 14 }}>
+                {side === 'front'
+                  ? <IdCard name={me.name} studentNo={me.studentNo} program={me.program} photo={media.photo} signature={signature} />
+                  : <IdCardBack info={media} />}
+              </View>
+              <Text style={[common.mu, { textAlign: 'center', marginTop: 10 }]}>
+                {media.photo ? 'Preview only. The printed ID may look slightly different.' : 'Waiting for the Registrar to upload your photo.'}
+              </Text>
+            </Card>
+          </View>
+        ) : null}
+      </View>
 
       {/* ---------- ID preview pop-up ---------- */}
       <Modal visible={preview} transparent animationType="fade" onRequestClose={() => setPreview(false)}>
@@ -198,6 +227,9 @@ export default function StudentHome({ me, go }) {
 }
 
 const styles = StyleSheet.create({
+  cols: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  colMain: { flex: 1 },
+  colSide: { width: 340 },
   hero: { backgroundColor: C.g9, borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden' },
   circleA: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.05)', right: -40, top: -50 },
   circleB: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(242,194,48,0.10)', right: 40, bottom: -50 },
