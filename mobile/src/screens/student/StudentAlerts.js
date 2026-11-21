@@ -10,7 +10,7 @@ export default function StudentAlerts({ me }) {
   const load = useLoad(() => getMyAlerts(me.uid), [me.uid]);
   const list = load.data || [];
   return (
-    <Page title="Alerts" load={load}>
+    <Page title="Alerts" load={load} narrow>
       {list.length === 0 && <Card><Text style={common.mu}>No alerts yet.</Text></Card>}
       {list.map((a) => (
         <Card key={a.id}><Text style={common.bold}>{a.message}</Text><Text style={common.mu}>{formatDate(a.createdAt)}</Text></Card>

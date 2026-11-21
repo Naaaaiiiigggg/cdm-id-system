@@ -50,9 +50,32 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && verifiedFor(request.resource.data.studentNo)
         && !exists(/databases/$(database)/documents/registered_students/$(request.resource.data.studentNo));
+      // The Registrar can suspend or reactivate an account (and nothing else on it).
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        && request.resource.data.status in ['Active', 'Suspended'];
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'suspendedAt', 'suspendedUntil', 'suspendPermanent', 'suspendReason', 'suspendMessage'])
+        && request.resource.data.status in ['Active', 'Suspended']
+        && request.resource.data.get('suspendReason', '') is string
+        && request.resource.data.get('suspendReason', '').size() <= 100
+        && request.resource.data.get('suspendMessage', '') is string
+        && request.resource.data.get('suspendMessage', '').size() <= 300
+        && (request.resource.data.status == 'Active'
+            || (request.resource.data.suspendedAt == request.time
+                && request.resource.data.suspendPermanent is bool
+                && (request.resource.data.suspendPermanent == true
+                    || (request.resource.data.suspendedUntil is timestamp
+                        && request.resource.data.suspendedUntil > request.time))));
+      // A student whose suspension end date has passed switches their own account back on at sign-in.
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && resource.data.role == 'student'
+        && resource.data.status == 'Suspended'
+        && resource.data.get('suspendPermanent', false) == false
+        && resource.data.get('suspendedUntil', null) != null
+        && resource.data.suspendedUntil <= request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'suspendedAt', 'suspendedUntil', 'suspendPermanent', 'suspendReason', 'suspendMessage'])
+        && request.resource.data.status == 'Active'
+        && request.resource.data.get('suspendedUntil', null) == null
+        && request.resource.data.get('suspendPermanent', false) == false;
       allow delete: if false;
     }
 

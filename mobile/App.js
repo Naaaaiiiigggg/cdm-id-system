@@ -1,12 +1,18 @@
+import { Platform } from 'react-native';
+import WebFrame from './src/components/WebFrame';
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StatusBar as RNStatusBar, StyleSheet, View } from 'react-native';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 import { C } from './src/theme';
-import { auth } from './src/services/firebase';
+import { auth, db } from './src/services/firebase';
 import { buildSession, cancelRegistration, finishRegistration, isRegistering, signOutUser } from './src/services/auth';
+import { studentNotice } from './src/utils/suspension';
+import { WideContext, useWideMode } from './src/utils/wide';
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from './src/components/TabBar';
+import DialogHost from './src/components/DialogHost';
 
 import Splash from './src/screens/auth/Splash';
 import Login from './src/screens/auth/Login';
@@ -29,11 +35,13 @@ export default function App() {
   const [session, setSession] = useState(null);     // null or { uid, role, name, ... }
   const [screen, setScreen] = useState('splash');   // splash | login | register | forgot
   const [tab, setTab] = useState('home');
+  const [notice, setNotice] = useState('');         // shown on the sign-in screen (for example: you were suspended)
 
   const open = useCallback((s) => {
     setSession(s);
-    if (s) setTab(s.role === 'admin' ? 'dash' : 'home');
+    if (s) { setTab(s.role === 'admin' ? 'dash' : 'home'); setNotice(''); }
   }, []);
+  const { wide, authWide } = useWideMode(session); // wide: signed in on a wide window; authWide: not signed in, wide window
 
   // Firebase tells us whenever someone signs in or out (and restores the last session).
   useEffect(() => {
@@ -51,6 +59,26 @@ export default function App() {
     return stop;
   }, [open]);
 
+  // While someone is signed in, watch their account. If the Registrar suspends it,
+  // sign them out right away (without this they would stay in until they reload the page).
+  useEffect(() => {
+    if (!session?.uid) return undefined;
+    const stop = onSnapshot(
+      doc(db, 'users', session.uid),
+      (snap) => {
+        const p = snap.data();
+        if (p && p.status !== 'Active') {
+          setNotice(studentNotice(p));
+          setSession(null);
+          setScreen('login');
+          signOutUser();
+        }
+      },
+      () => {},
+    );
+    return stop;
+  }, [session?.uid]);
+
   // Called when a new student taps Continue on the "Is this you?" screen.
   const afterRegister = async () => {
     finishRegistration();
@@ -64,21 +92,26 @@ export default function App() {
 
   if (booting) {
     return (
-      <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
-        <StatusBar style="light" />
-        <ActivityIndicator color={C.gold} size="large" />
-      </View>
+      <WebFrame wide={authWide}>
+        <View style={[styles.root, { backgroundColor: C.g9, justifyContent: 'center' }]}>
+          <StatusBar style="light" />
+          <ActivityIndicator color={C.gold} size="large" />
+        </View>
+      </WebFrame>
     );
   }
 
   let body;
   let tabs = null;
 
+  // On a wide window the sign-in screen already shows the brand panel, so skip the splash.
+  const view = authWide && screen === 'splash' ? 'login' : screen;
+
   if (!session) {
-    if (screen === 'splash') body = <Splash onNext={() => setScreen('login')} />;
-    else if (screen === 'register') body = <Register onDone={afterRegister} onBack={async () => { await cancelRegistration(); setScreen('login'); }} />;
-    else if (screen === 'forgot') body = <ForgotPassword onBack={() => setScreen('login')} />;
-    else body = <Login onRegister={() => setScreen('register')} onForgot={() => setScreen('forgot')} />;
+    if (view === 'splash') body = <Splash onNext={() => setScreen('login')} />;
+    else if (view === 'register') body = <Register onDone={afterRegister} onBack={async () => { await cancelRegistration(); setScreen('login'); }} />;
+    else if (view === 'forgot') body = <ForgotPassword onBack={() => setScreen('login')} />;
+    else body = <Login notice={notice} onRegister={() => setScreen('register')} onForgot={() => setScreen('forgot')} />;
   } else if (session.role === 'admin') {
     tabs = ADMIN_TABS;
     body = {
@@ -98,16 +131,28 @@ export default function App() {
     }[tab];
   }
 
-  const onSplash = screen === 'splash' && !session;
+  const onSplash = view === 'splash' && !session;
   return (
-    <View style={[styles.root, onSplash && { backgroundColor: C.g9 }]}>
-      <StatusBar style={onSplash ? 'light' : 'dark'} />
-      <View style={{ flex: 1 }}>{body}</View>
-      {tabs && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
-    </View>
+    <WebFrame wide={wide || authWide}>
+      <WideContext.Provider value={wide}>
+        <View style={[styles.root, onSplash && { backgroundColor: C.g9 }, wide && { flexDirection: 'row' }]}>
+          <StatusBar style={onSplash ? 'light' : 'dark'} />
+          {tabs && wide && <TabBar side tabs={tabs} tab={tab} setTab={setTab} subtitle={session.role === 'admin' ? 'Registrar' : 'Student'} />}
+          {wide ? (
+            <View style={styles.main}><View style={[styles.content, session.role !== 'admin' && { maxWidth: 860 }]}>{body}</View></View>
+          ) : (
+            <View style={{ flex: 1 }}>{body}</View>
+          )}
+          {tabs && !wide && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
+          <DialogHost />
+        </View>
+      </WideContext.Provider>
+    </WebFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, paddingTop: RNStatusBar.currentHeight || 44 },
+  root: { flex: 1, backgroundColor: C.bg, paddingTop: Platform.OS === 'web' ? 0 : (RNStatusBar.currentHeight || 44) },
+  main: { flex: 1, alignItems: 'center' },
+  content: { flex: 1, width: '100%', maxWidth: 1100 },
 });

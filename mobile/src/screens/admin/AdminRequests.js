@@ -4,6 +4,7 @@ import Page from '../../components/Page';
 import ReqList from '../../components/ReqList';
 import ManageRequestModal from '../../components/ManageRequestModal';
 import useLoad from '../../utils/useLoad';
+import { useWide } from '../../utils/wide';
 import { getAdminData } from '../../services/requests';
 import { C, STATUSES, common } from '../../theme';
 
@@ -12,6 +13,7 @@ const STATUS_FILTERS = ['All', ...STATUSES, 'Rejected'];
 
 export default function AdminRequests() {
   const load = useLoad(getAdminData, []);
+  const wide = useWide();
   const [type, setType] = useState('All types');
   const [status, setStatus] = useState('All');
   const [q, setQ] = useState('');
@@ -30,9 +32,9 @@ export default function AdminRequests() {
 
   return (
     <Page title="Requests" load={load}>
-      <TextInput style={styles.search} placeholder="Search name, student no. or request no." placeholderTextColor="#9AA89F" value={q} onChangeText={setQ} />
+      <TextInput style={[styles.search, wide && { maxWidth: 520 }]} placeholder="Search name, student no. or request no." placeholderTextColor="#9AA89F" value={q} onChangeText={setQ} />
 
-      <View style={styles.seg}>
+      <View style={[styles.seg, wide && { width: 420, maxWidth: '100%' }]}>
         {TYPES.map((t) => (
           <TouchableOpacity key={t} style={[styles.segBtn, type === t && styles.segOn]} onPress={() => setType(t)}>
             <Text style={[styles.segTx, type === t && { color: C.ink }]}>{t}</Text>
