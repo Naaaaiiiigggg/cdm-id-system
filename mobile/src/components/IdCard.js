@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
 import SignatureView from './SignatureView';
 import { CARD_H, CARD_W } from './cardSize';

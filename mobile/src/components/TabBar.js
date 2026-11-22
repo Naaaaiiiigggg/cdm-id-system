@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { C } from '../theme';
 
 // Each tab: [key, Feather icon name, label]

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import Pill from './Pill';
 import Btn from './Btn';
 import DateField from './DateField';

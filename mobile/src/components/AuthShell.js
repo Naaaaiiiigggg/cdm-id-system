@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
 import { useWideWindow } from '../utils/wide';
 import { C, common } from '../theme';

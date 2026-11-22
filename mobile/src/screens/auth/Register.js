@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Field from '../../components/Field';
 import AuthShell from '../../components/AuthShell';
