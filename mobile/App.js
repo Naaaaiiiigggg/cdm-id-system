@@ -13,6 +13,7 @@ import { studentNotice } from './src/utils/suspension';
 import { WideContext, useWideMode } from './src/utils/wide';
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from './src/components/TabBar';
 import DialogHost from './src/components/DialogHost';
+import InstallHint from './src/components/InstallHint';
 
 import Splash from './src/screens/auth/Splash';
 import Login from './src/screens/auth/Login';
@@ -137,6 +138,7 @@ export default function App() {
       <WideContext.Provider value={wide}>
         <View style={[styles.root, onSplash && { backgroundColor: C.g9 }, wide && { flexDirection: 'row' }]}>
           <StatusBar style={onSplash ? 'light' : 'dark'} />
+          {!wide && !authWide && !onSplash && <InstallHint />}
           {tabs && wide && <TabBar side tabs={tabs} tab={tab} setTab={setTab} subtitle={session.role === 'admin' ? 'Registrar' : 'Student'} />}
           {wide ? (
             <View style={styles.main}><View style={[styles.content, session.role !== 'admin' && { maxWidth: 860 }]}>{body}</View></View>
