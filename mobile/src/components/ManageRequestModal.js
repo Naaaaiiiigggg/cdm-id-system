@@ -8,6 +8,7 @@ import DateField from './DateField';
 import TimeField from './TimeField';
 import IdCard from './IdCard';
 import IdCardBack from './IdCardBack';
+import { ReplacementAdminReminder } from './ReplacementNotice';
 import { getMySignature, updateRequest } from '../services/requests';
 import { friendly } from '../services/errors';
 import { formatDate, shortDate, todayStr } from '../utils/format';
@@ -198,6 +199,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                 </View>
                 {request.reason ? <Text style={[common.mu, { marginTop: 8 }]}>Reason: <Text style={{ color: C.ink, fontWeight: '600' }}>{request.reason}</Text></Text> : null}
                 <Text style={common.mu}>Submitted: {formatDate(request.createdAt)}</Text>
+                {request.type === 'Replacement' ? <ReplacementAdminReminder reason={request.reason} /> : null}
               </View>
 
               {/* ID preview (works for New ID and Replacement requests) */}
