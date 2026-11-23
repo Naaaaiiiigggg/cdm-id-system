@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 
-// "Wide" = a browser window at least this wide (a laptop or desktop, not a phone).
+// "Wide" = a browser window at least this wide (a laptop, desktop or tablet on its side). It needs room for the 236px side menu
+// plus the student's two columns, so a tablet held upright (600-899px) keeps the bottom tab bar and a wider column instead.
 export const WIDE_MIN = 900;
 
 // true inside the signed-in app when the window is wide (the side menu layout)

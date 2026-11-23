@@ -13,5 +13,19 @@ YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"]
 STATUSES = ["Submitted", "Under Review", "Approved", "For Printing", "Ready for Pickup", "Claimed", "Rejected"]
 REQUEST_TYPES = ["New ID", "Replacement"]
 
+# The ONLY allowed stage changes. Keep it identical to firestore.rules (validMove) and mobile/src/data/stageRules.js.
+# A request only moves forward. Rejecting is possible only before Approved. Claimed is final.
+ALLOWED_TRANSITIONS = {
+    "Submitted": ["Under Review", "Rejected"],
+    "Under Review": ["Approved", "Rejected"],
+    "Approved": ["For Printing"],
+    "For Printing": ["Ready for Pickup"],
+    "Ready for Pickup": ["Claimed"],
+    "Claimed": [],
+    "Rejected": ["Under Review"],  # reopen only
+}
+# From these stages on, the ID needs the Registrar photo and the student's signature.
+PRINT_STAGES = ["For Printing", "Ready for Pickup", "Claimed"]
+
 # Public Firebase web API key (the same one the mobile app uses). Needed for the /auth/login helper.
 FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "AIzaSyBFJQN3CJrOT1isXD693af5_bYbSWAa8tw")

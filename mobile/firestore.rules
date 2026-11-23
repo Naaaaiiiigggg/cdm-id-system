@@ -20,6 +20,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/registrar_students/$(studentNo)).data.get('photo', '') != ''
         && exists(/databases/$(database)/documents/student_signatures/$(studentNo));
     }
+    // The ONLY allowed stage changes. Keep it identical to backend/app/core/config.py (ALLOWED_TRANSITIONS)
+    // and mobile/src/data/stageRules.js. Staying on the same stage (editing the note or pickup details) is allowed,
+    // except on Claimed, which is final. A request only moves forward, and can be rejected only before Approved.
+    function validMove(fromStage, toStage) {
+      return fromStage != 'Claimed' && (fromStage == toStage
+        || (fromStage == 'Submitted' && toStage in ['Under Review', 'Rejected'])
+        || (fromStage == 'Under Review' && toStage in ['Approved', 'Rejected'])
+        || (fromStage == 'Approved' && toStage == 'For Printing')
+        || (fromStage == 'For Printing' && toStage == 'Ready for Pickup')
+        || (fromStage == 'Ready for Pickup' && toStage == 'Claimed')
+        || (fromStage == 'Rejected' && toStage == 'Under Review'));
+    }
     function verifiedFor(studentNo) {
       return signedIn()
         && exists(/databases/$(database)/documents/verifications/$(request.auth.uid))
@@ -139,10 +151,11 @@ service cloud.firestore {
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 60
         && request.resource.data.createdAt == request.time;
-      // The Registrar can only change: the stage, the note, the date of each step and the pickup details.
+      // The Registrar can only change: the stage (see validMove), the note, the date of each step and the pickup details.
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt', 'stageDates', 'pickupDate', 'pickupFrom', 'pickupTo', 'pickupBring'])
         && request.resource.data.status in ['Submitted', 'Under Review', 'Approved', 'For Printing', 'Ready for Pickup', 'Claimed', 'Rejected']
+        && validMove(resource.data.status, request.resource.data.status)
         && request.resource.data.adminNote is string
         && request.resource.data.adminNote.size() <= 200
         && request.resource.data.updatedAt == request.time
