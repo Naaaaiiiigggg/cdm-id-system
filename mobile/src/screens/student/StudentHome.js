@@ -8,6 +8,7 @@ import Btn from '../../components/Btn';
 import KV from '../../components/KV';
 import IdCard from '../../components/IdCard';
 import IdCardBack from '../../components/IdCardBack';
+import { ReplacementPickupInfo } from '../../components/ReplacementNotice';
 import { CARD_H, CARD_W } from '../../components/cardSize';
 import useLoad from '../../utils/useLoad';
 import { useWide } from '../../utils/wide';
@@ -109,6 +110,7 @@ export default function StudentHome({ me, go }) {
                 {timeRange(r.pickupFrom, r.pickupTo) ? <Text style={styles.pickupLine}>{timeRange(r.pickupFrom, r.pickupTo)}</Text> : null}
                 <Text style={styles.pickupLine}>Registrar's Office</Text>
                 {r.pickupBring ? <Text style={styles.pickupBring}>Bring: {r.pickupBring}</Text> : null}
+                {r.type === 'Replacement' ? <ReplacementPickupInfo reason={r.reason} bring={r.pickupBring} /> : null}
               </View>
             ) : null}
             {idx >= 0 ? (

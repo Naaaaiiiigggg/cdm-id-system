@@ -5,13 +5,15 @@ import Page from '../../components/Page';
 import Card from '../../components/Card';
 import Pill from '../../components/Pill';
 import AccountModal from '../../components/AccountModal';
+import AddStudentModal from '../../components/AddStudentModal';
 import useLoad from '../../utils/useLoad';
 import { listAccounts } from '../../services/students';
 import { useWide } from '../../utils/wide';
 import { fmtLong } from '../../utils/suspension';
 import { C, common } from '../../theme';
 
-const FILTERS = ['All', 'Active', 'Suspended', 'Not registered'];
+const FILTERS = ['All', 'Active', 'Suspended', 'Not registered', 'No photo'];
+const matchesFilter = (a, f) => f === 'All' || (f === 'No photo' ? !a.photo : a.status === f);
 
 // "Permanent" / "Until December 1, 2026" under a suspended student's status
 const suspendedNote = (a) => {
@@ -26,12 +28,14 @@ export default function AdminAccounts() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('All');
   const [sel, setSel] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [flash, setFlash] = useState('');
 
   const all = load.data || [];
-  const count = (f) => (f === 'All' ? all.length : all.filter((a) => a.status === f).length);
+  const count = (f) => all.filter((a) => matchesFilter(a, f)).length;
   const needle = q.trim().toLowerCase();
   const list = all.filter((a) => {
-    if (filter !== 'All' && a.status !== filter) return false;
+    if (!matchesFilter(a, filter)) return false;
     if (!needle) return true;
     return [a.name, a.studentNo, a.email, a.program].some((v) => (v || '').toLowerCase().includes(needle));
   });
@@ -40,10 +44,17 @@ export default function AdminAccounts() {
 
   return (
     <Page title="Accounts" load={load}>
-      <TextInput
-        style={[styles.search, wide && { maxWidth: 520 }]} placeholder="Search name, student no. or email"
-        placeholderTextColor="#9AA89F" value={q} onChangeText={setQ}
-      />
+      <View style={styles.topRow}>
+        <TextInput
+          style={[styles.search, { flex: 1, marginTop: 0 }, wide && { maxWidth: 520 }]} placeholder="Search name, student no. or email"
+          placeholderTextColor="#9AA89F" value={q} onChangeText={setQ}
+        />
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setFlash(''); setAdding(true); }}>
+          <Feather name="user-plus" size={16} color="#fff" />
+          <Text style={styles.addTx}>{wide ? 'Add student' : 'Add'}</Text>
+        </TouchableOpacity>
+      </View>
+      {flash ? <Text style={styles.flash}>{flash}</Text> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
         {FILTERS.map((f) => (
           <TouchableOpacity key={f} style={[styles.chip, filter === f && styles.chipOn]} onPress={() => setFilter(f)}>
@@ -111,12 +122,22 @@ export default function AdminAccounts() {
         account={current}
         onClose={() => setSel(null)}
         onChanged={() => { setSel(null); load.reload(); }}
+        onReload={load.reload}
+      />
+      <AddStudentModal
+        visible={adding}
+        onClose={() => setAdding(false)}
+        onSaved={(st) => { setAdding(false); setFlash(`Added ${st.name} (${st.studentNo}). They can register now.`); load.reload(); }}
       />
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.g9, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  addTx: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  flash: { color: C.g7, fontSize: 12, fontWeight: '700', marginTop: 10 },
   search: { backgroundColor: C.sf, borderWidth: 1, borderColor: C.ln, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, fontSize: 14, color: C.ink, marginTop: 12 },
   chip: { borderWidth: 1, borderColor: C.ln, backgroundColor: C.sf, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 13 },
   chipOn: { backgroundColor: C.g9, borderColor: C.g9 },

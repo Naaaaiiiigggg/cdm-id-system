@@ -12,6 +12,7 @@ import Card from "../../components/Card";
 import Btn from "../../components/Btn";
 import IdCard from "../../components/IdCard";
 import IdCardBack from "../../components/IdCardBack";
+import ReplacementNotice from "../../components/ReplacementNotice";
 import SignaturePad from "../../components/SignaturePad";
 import Pill from "../../components/Pill";
 import useLoad from "../../utils/useLoad";
@@ -138,6 +139,7 @@ export default function StudentRequest({ me, go }) {
             </Text>
           </View>
         </Card>
+        {type === "Replacement" ? <ReplacementNotice reason={reason} /> : null}
         <Btn title="View my request" onPress={() => go("home")} />
       </ScrollView>
     );
@@ -220,6 +222,7 @@ export default function StudentRequest({ me, go }) {
         ) : (
           <IdCardBack info={media} />
         )}
+        {type === "Replacement" ? <ReplacementNotice reason={reason} /> : null}
         {!media.photo ? (
           <View style={common.note}>
             <Text style={common.noteTx}>
@@ -269,6 +272,7 @@ export default function StudentRequest({ me, go }) {
               </TouchableOpacity>
             ))}
           </View>
+          {type === "Replacement" ? <ReplacementNotice reason={reason} /> : null}
           <View style={common.note}>
             <Text style={common.noteTx}>
               ✓ Details matched with Registrar records (read-only).
@@ -311,8 +315,9 @@ export default function StudentRequest({ me, go }) {
               color={ok ? C.g9 : C.mu}
             />
             <Text style={styles.checkTx}>
-              I confirm my details are correct. A replacement deactivates my
-              previous ID.
+              {type === "Replacement"
+                ? "I confirm my details are correct and I understand the replacement requirements above."
+                : "I confirm my details are correct."}
             </Text>
           </TouchableOpacity>
           <Text style={common.err}>{err}</Text>

@@ -4,7 +4,7 @@
 // - If the internet is down, shows a friendly "You're offline" page instead of the browser error.
 // It never touches Firebase or any other website: only files from this app's own address.
 
-const VERSION = 'cdm-v1'; // change this number to force everyone onto a fresh cache
+const VERSION = 'cdm-v2'; // change this number to force everyone onto a fresh cache
 const SHELL = `shell-${VERSION}`;
 const ASSETS = `assets-${VERSION}`;
 const PRECACHE = ['/offline.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];

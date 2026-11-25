@@ -8,23 +8,19 @@ import DateField from './DateField';
 import TimeField from './TimeField';
 import IdCard from './IdCard';
 import IdCardBack from './IdCardBack';
+import { ReplacementAdminReminder } from './ReplacementNotice';
 import { getMySignature, updateRequest } from '../services/requests';
 import { friendly } from '../services/errors';
-import { formatDate, shortDate, todayStr } from '../utils/format';
+import { formatDate, todayStr } from '../utils/format';
 import { programName } from '../data/programs';
 import { REJECT_REASONS, TEMPLATES } from '../data/templates';
 import { useWide } from '../utils/wide';
+import { confirmDialog } from '../utils/dialog';
+import { PRINT_STAGES, canReject, confirmCopy, forwardStage, isFinal } from '../data/stageRules';
 import { C, STATUSES, common } from '../theme';
 
 const MAX_NOTE = 200;
 const MAX_BRING = 100;
-const PRINT_AT = STATUSES.indexOf('For Printing'); // from this stage on, the ID needs a photo and a signature
-
-// The stage the Registrar most likely wants next.
-const nextStage = (req) => {
-  if (req.status === 'Rejected') return 'Under Review';
-  return STATUSES[STATUSES.indexOf(req.status) + 1] || req.status;
-};
 const defaultBring = (req) => (req.type === 'Replacement' && /lost|stolen/i.test(req.reason || '') ? 'Valid ID and Affidavit of Loss' : 'Valid ID');
 
 const Chips = ({ items, onPick }) => (
@@ -39,7 +35,8 @@ const Chips = ({ items, onPick }) => (
 );
 
 // Pop-up for the Registrar to manage one request.
-// The main button moves it to the next stage in one tap. "Choose a different stage" is the fallback.
+// The main button moves it to the next allowed stage, after a confirmation. There is no way to skip or go back
+// (see data/stageRules.js). Reject is only offered before Approved, and a Claimed request is final.
 // request = the request document, student = that student's Registrar record.
 export default function ManageRequestModal({ request, student = {}, onClose, onSaved }) {
   const wide = useWide();
@@ -51,7 +48,6 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
   const [pFrom, setPFrom] = useState('');
   const [pTo, setPTo] = useState('');
   const [pBring, setPBring] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [showId, setShowId] = useState(false);
@@ -61,13 +57,12 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
   useEffect(() => {
     if (request) {
       setMode('move');
-      setStatus(nextStage(request));
+      setStatus(forwardStage(request.status));
       setNote('');
       setPDate(request.pickupDate || '');
       setPFrom(request.pickupFrom || '');
       setPTo(request.pickupTo || '');
       setPBring(request.pickupBring ?? defaultBring(request));
-      setShowAll(false);
       setErr('');
       setBusy(false);
       setShowId(false);
@@ -80,7 +75,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
 
   if (!request) return <Modal visible={false} transparent />;
 
-  const cur = STATUSES.indexOf(request.status);
+  const final = isFinal(request.status);
   const sel = STATUSES.indexOf(status);
   const moving = status !== request.status;
   const trimmed = note.trim();
@@ -93,19 +88,12 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
 
   // The ID can't be printed (or handed out) without the Registrar photo and the student's signature.
   const missing = [!student.photo && 'the photo has not been uploaded', sig === null && 'the student has not signed yet'].filter(Boolean);
-  const blocked = moving && sel >= PRINT_AT && (sig === undefined || missing.length > 0);
+  const blocked = moving && PRINT_STAGES.includes(status) && (sig === undefined || missing.length > 0);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const lastDay = new Date(today);
   lastDay.setFullYear(lastDay.getFullYear() + 1);
-
-  const pick = (name) => {
-    if (name === request.status) setNote(request.adminNote || '');
-    else if (status === request.status && note === (request.adminNote || '')) setNote('');
-    setStatus(name);
-    setErr('');
-  };
 
   const save = async (target) => {
     if (target === 'Rejected' && !trimmed) return setErr('Please give a reason. Tap a quick reason or write your own.');
@@ -116,6 +104,8 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
       if (pFrom && pTo && pTo <= pFrom) return setErr('The end time must be later than the start time.');
       pickup = { date: pDate, from: pFrom, to: pTo, bring: pBring.trim() };
     }
+    // Ask before every stage move (a note-only or pickup-only change needs no confirmation).
+    if (target !== request.status && !(await confirmDialog(confirmCopy(request.status, target)))) return;
     setBusy(true);
     setErr('');
     try {
@@ -130,7 +120,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
   const goReject = () => { setMode('reject'); setNote(''); setErr(''); };
   const cancelReject = () => { setMode('move'); setNote(''); setErr(''); };
 
-  const label = busy ? 'Saving…' : moving ? (request.status === 'Rejected' ? `Reopen as ${status} →` : `Move to ${status} →`) : 'Save changes';
+  const label = busy ? 'Saving…' : moving ? (request.status === 'Rejected' ? `Reopen as ${status} ` : `Move to ${status} `) : 'Save changes';
   const off = busy || !changed || blocked;
 
   const sideBySide = wide && showId;
@@ -198,6 +188,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                 </View>
                 {request.reason ? <Text style={[common.mu, { marginTop: 8 }]}>Reason: <Text style={{ color: C.ink, fontWeight: '600' }}>{request.reason}</Text></Text> : null}
                 <Text style={common.mu}>Submitted: {formatDate(request.createdAt)}</Text>
+                {request.type === 'Replacement' ? <ReplacementAdminReminder reason={request.reason} /> : null}
               </View>
 
               {/* ID preview (works for New ID and Replacement requests) */}
@@ -222,6 +213,11 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                   <Btn title={busy ? 'Saving…' : 'Reject request'} onPress={() => save('Rejected')} disabled={busy} style={[{ backgroundColor: C.bad }, busy && { opacity: 0.45 }]} />
                   <TouchableOpacity onPress={busy ? undefined : cancelReject}><Text style={styles.cancel}>Cancel</Text></TouchableOpacity>
                 </>
+              ) : final ? (
+                /* ---------------- Claimed: final ---------------- */
+                <View style={[common.note, { marginTop: 18 }]}>
+                  <Text style={common.noteTx}>This request is Claimed. The ID was already handed out, so it can't be changed.</Text>
+                </View>
               ) : (
                 /* ---------------- move to a stage ---------------- */
                 <>
@@ -267,27 +263,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
                   <Text style={common.err}>{err}</Text>
                   <Btn title={label} onPress={() => save(status)} disabled={off} style={off && { opacity: 0.45 }} />
 
-                  <TouchableOpacity style={styles.toggle} onPress={() => setShowAll(!showAll)}>
-                    <Text style={styles.toggleTx}>{showAll ? 'Hide the other stages' : 'Choose a different stage'}</Text>
-                    <Feather name={showAll ? 'chevron-up' : 'chevron-down'} size={16} color={C.g7} />
-                  </TouchableOpacity>
-                  {showAll ? STATUSES.map((name, i) => {
-                    const on = status === name;
-                    const done = sel >= 0 && i < sel;
-                    return (
-                      <TouchableOpacity key={name} activeOpacity={0.8} onPress={() => pick(name)} style={[styles.step, on && styles.stepOn]}>
-                        <View style={[styles.dot, done && styles.dotDone, on && styles.dotOn]}>
-                          {done ? <Feather name="check" size={13} color="#fff" /> : <Text style={{ fontSize: 11, fontWeight: '800', color: on ? C.g9 : C.mu }}>{i + 1}</Text>}
-                        </View>
-                        <Text style={[styles.stepName, on && { color: C.ink, fontWeight: '800' }]}>{name}</Text>
-                        {i === cur ? <Text style={styles.curTag}>Current</Text> : null}
-                        {request.stageDates?.[name] ? <Text style={styles.when}>{shortDate(request.stageDates[name])}</Text> : null}
-                        {on ? <Feather name="check-circle" size={18} color={C.g7} /> : null}
-                      </TouchableOpacity>
-                    );
-                  }) : null}
-
-                  {request.status !== 'Rejected' ? (
+                  {canReject(request.status) ? (
                     <TouchableOpacity onPress={busy ? undefined : goReject}>
                       <Text style={styles.reject}>Reject this request</Text>
                     </TouchableOpacity>
@@ -330,16 +306,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: C.ln, backgroundColor: C.sf, borderRadius: 18, paddingVertical: 6, paddingHorizontal: 11 },
   chipTx: { fontSize: 12, fontWeight: '700', color: C.g7 },
-  toggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 14, paddingVertical: 8 },
-  toggleTx: { color: C.g7, fontWeight: '700', fontSize: 13 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: 'transparent' },
-  stepOn: { backgroundColor: C.sf, borderColor: C.gold },
-  dot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: C.ln, backgroundColor: C.sf, alignItems: 'center', justifyContent: 'center' },
-  dotDone: { backgroundColor: C.g9, borderColor: C.g9 },
-  dotOn: { borderColor: C.gold },
-  stepName: { flex: 1, fontSize: 14, color: C.mu },
-  curTag: { fontSize: 10, fontWeight: '800', color: C.g7, backgroundColor: C.g1, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7, overflow: 'hidden' },
-  when: { fontSize: 11, color: C.mu, fontWeight: '600' },
   input: { backgroundColor: C.sf, borderWidth: 1, borderColor: C.ln, borderRadius: 12, padding: 12, minHeight: 84, textAlignVertical: 'top', fontSize: 14, color: C.ink },
   reject: { color: C.bad, fontWeight: '700', textAlign: 'center', marginTop: 12, marginBottom: 4 },
   cancel: { color: C.mu, fontWeight: '700', textAlign: 'center', marginTop: 14, marginBottom: 4 },

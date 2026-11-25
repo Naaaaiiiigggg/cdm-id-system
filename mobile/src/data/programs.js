@@ -14,7 +14,6 @@ export const PROGRAMS = {
   'BEEd-GEN': { name: 'Bachelor of Elementary Education - Generalist', inst: 'IE' },
   'BEEd-ECED': { name: 'Bachelor of Early Childhood Education', inst: 'IE' },
   'BTLEd-ICT': { name: 'Bachelor of Technology and Livelihood Education major in Information and Communication Technology', inst: 'IE' },
-  TCP: { name: 'Teacher Certificate Program (18 Units)', inst: 'IE' },
   'BSBA-HRM': { name: 'Bachelor of Science in Business Administration major in Human Resource Management', inst: 'IB' },
   BSE: { name: 'Bachelor of Science in Entrepreneurship', inst: 'IB' },
 };

@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where
 import { auth, db } from './firebase';
 import { getStudentMap } from './students';
 import { STATUSES } from '../theme';
+import { canMove, isFinal } from '../data/stageRules';
 import { timeRange, weekdayDate } from '../utils/format';
 
 const newestFirst = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
@@ -69,7 +70,7 @@ export async function saveMySignature(studentNo, { path, box }) {
   return { path, box };
 }
 
-// The date each step was reached: { 'Approved': <timestamp>, ... }. Going back a step removes the later dates.
+// The date each step was reached: { 'Approved': <timestamp>, ... }. Reopening a rejected request removes the Rejected date.
 function nextStageDates(prev = {}, status) {
   const i = STATUSES.indexOf(status);
   const out = {};
@@ -98,6 +99,18 @@ export async function updateRequest(request, { status, note, pickup }) {
     || pickup.to !== (request.pickupTo || '') || pickup.bring !== (request.pickupBring || '')
   );
   if (!statusChanged && !noteChanged && !pickupChanged) return;
+
+  // Same rules as firestore.rules and the API: forward only, Claimed is final.
+  if (isFinal(request.status)) {
+    const e = new Error('This request is Claimed. The ID was already handed out, so it can\'t be changed.');
+    e.code = 'app/final-request';
+    throw e;
+  }
+  if (statusChanged && !canMove(request.status, status)) {
+    const e = new Error(`A request can't move from ${request.status} to ${status}.`);
+    e.code = 'app/invalid-transition';
+    throw e;
+  }
 
   let message;
   if (status === 'Rejected') message = `Your ID request ${request.requestNo} was rejected.`;

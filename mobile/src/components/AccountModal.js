@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
+  Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Pill from './Pill';
 import Btn from './Btn';
 import DateField from './DateField';
+import StudentForm from './StudentForm';
+import PhotoUploader from './PhotoUploader';
 import { sendReset } from '../services/auth';
-import { reactivateAccount, suspendAccount } from '../services/students';
+import { deleteStudent, reactivateAccount, suspendAccount, updateStudent } from '../services/students';
 import { friendly } from '../services/errors';
 import { programName } from '../data/programs';
 import { EMAIL_RE } from '../utils/format';
@@ -31,10 +33,11 @@ function Row({ k, children }) {
 
 // Pop-up for one student account: their info, send a reset link, suspend or reactivate.
 // Confirmations and messages are shown inside this pop-up (not as separate dialogs).
-export default function AccountModal({ account, onClose, onChanged }) {
+// onChanged: close the pop-up and reload the list. onReload: reload the list and keep the pop-up open.
+export default function AccountModal({ account, onClose, onChanged, onReload }) {
   const wide = useWide();
   const { height: winH } = useWindowDimensions();
-  const [mode, setMode] = useState('view'); // view | suspend | reactivate
+  const [mode, setMode] = useState('view'); // view | suspend | reactivate | reset | edit | delete | photo
   const [reason, setReason] = useState('');
   const [dur, setDur] = useState('7d');
   const [custom, setCustom] = useState('');
@@ -122,6 +125,32 @@ export default function AccountModal({ account, onClose, onChanged }) {
     setMode('view');
   };
 
+  const doSave = async (data) => {
+    setBusy(true);
+    setErr('');
+    try {
+      await updateStudent(account.studentNo, data);
+      if (onReload) onReload();
+      setInfo('Details updated.');
+      setMode('view');
+    } catch (e) {
+      setErr(friendly(e));
+    }
+    setBusy(false);
+  };
+
+  const doDelete = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      await deleteStudent(account.studentNo);
+      onChanged();
+    } catch (e) {
+      setErr(friendly(e));
+      setBusy(false);
+    }
+  };
+
   const s = account.suspension;
   const suspended = account.status === 'Suspended';
 
@@ -145,10 +174,18 @@ export default function AccountModal({ account, onClose, onChanged }) {
               {mode === 'view' ? (
                 <>
                   <View style={styles.box}>
+                    <Row k="Photo">
+                      {account.photo
+                        ? <Image source={{ uri: account.photo }} style={{ width: 60, height: 75, borderRadius: 6, backgroundColor: '#E8ECF0' }} />
+                        : 'Not uploaded yet'}
+                    </Row>
                     <Row k="Program">{account.program ? `${programName(account.program)}` : '—'}</Row>
                     <Row k="Year level">{account.yearLevel || '—'}</Row>
                     <Row k="Email">{account.email || 'Not registered yet'}</Row>
                     <Row k="Contact">{account.contact || '—'}</Row>
+                    <Row k="Birthdate">{account.birthdate || '—'}</Row>
+                    <Row k="Address">{account.address || '—'}</Row>
+                    <Row k="Guardian">{account.guardian ? `${account.guardian}${account.guardianContact ? ` · ${account.guardianContact}` : ''}` : '—'}</Row>
                     <Row k="Account"><View style={{ flexDirection: 'row' }}><Pill s={account.status} /></View></Row>
                   </View>
 
@@ -185,6 +222,41 @@ export default function AccountModal({ account, onClose, onChanged }) {
                       )}
                     </>
                   )}
+
+ <Btn title={account.photo ? 'Change photo' : 'Upload photo'} kind="ghost" onPress={() => { setErr(''); setInfo(''); setMode('photo'); }} />
+                  <Btn title="Edit details" kind="ghost" onPress={() => { setErr(''); setInfo(''); setMode('edit'); }} />
+                  {!account.uid ? (
+                    <TouchableOpacity onPress={() => { setErr(''); setInfo(''); setMode('delete'); }}>
+                      <Text style={styles.danger}>Delete from the Registrar list…</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!account.uid && info ? <Text style={styles.ok}>{info}</Text> : null}
+                </>
+              ) : null}
+
+              {mode === 'edit' ? (
+                <>
+                  <Text style={styles.sec}>Edit details</Text>
+                  <StudentForm initial={account} isNew={false} busy={busy} error={err} submitLabel="Save changes" onSubmit={doSave} onCancel={() => { setErr(''); setMode('view'); }} />
+                </>
+              ) : null}
+
+              {mode === 'photo' ? (
+                <PhotoUploader
+                  studentNo={account.studentNo}
+                  currentPhoto={account.photo}
+                  onSaved={() => { if (onReload) onReload(); setInfo('Photo updated.'); setMode('view'); }}
+                  onCancel={() => { setErr(''); setMode('view'); }}
+                />
+              ) : null}
+
+              {mode === 'delete' ? (
+                <>
+                  <Text style={styles.sec}>Delete this student?</Text>
+                  <Text style={common.mu}>{account.name} ({account.studentNo}) will be removed from the Registrar list and will no longer be able to register. This cannot be undone.</Text>
+                  {err ? <Text style={common.err}>{err}</Text> : null}
+                  <Btn title={busy ? 'Deleting…' : 'Yes, delete'} onPress={doDelete} disabled={busy} style={[{ backgroundColor: C.bad }, busy && { opacity: 0.45 }]} />
+                  <TouchableOpacity onPress={busy ? undefined : () => { setErr(''); setMode('view'); }}><Text style={styles.cancel}>Cancel</Text></TouchableOpacity>
                 </>
               ) : null}
 
@@ -284,5 +356,6 @@ const styles = StyleSheet.create({
   input: { backgroundColor: C.sf, borderWidth: 1, borderColor: C.ln, borderRadius: 12, padding: 12, minHeight: 84, textAlignVertical: 'top', fontSize: 14, color: C.ink },
   preview: { backgroundColor: '#FDECEA', borderRadius: 12, padding: 12 },
   previewTx: { color: C.bad, fontSize: 13, lineHeight: 19 },
+  danger: { color: C.bad, fontWeight: '700', textAlign: 'center', marginTop: 16, marginBottom: 4, fontSize: 13 },
   cancel: { color: C.mu, fontWeight: '700', textAlign: 'center', marginTop: 14, marginBottom: 4 },
 });

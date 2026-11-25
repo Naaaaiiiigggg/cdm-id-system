@@ -1,5 +1,5 @@
 import {
-  Timestamp, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch,
+  Timestamp, collection, deleteField, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { CLEARED, suspensionEnded, suspensionInfo } from '../utils/suspension';
@@ -44,6 +44,7 @@ export async function listAccounts() {
     const status = u ? u.status : 'Not registered';
     list.push({
       studentNo: d.id, name: r.name, program: r.program, yearLevel: r.yearLevel, contact: r.contact || '',
+      photo: r.photo || '', birthdate: r.birthdate || '', address: r.address || '', guardian: r.guardian || '', guardianContact: r.guardianContact || '',
       uid: u ? u.uid : null, email: u ? u.email : '', status,
       suspension: u && status === 'Suspended' ? suspensionInfo(u) : null,
     });
@@ -81,4 +82,78 @@ export async function reactivateAccount(account) {
     by: admin.uid, byEmail: admin.email, createdAt: serverTimestamp(),
   });
   await batch.commit();
+}
+
+// ---------------- Registrar list: add, edit, delete (admin only) ----------------
+// These write to registrar_students. firestore.rules check the same rules again on the server.
+
+const writeLog = (batch, action, target) => {
+  const admin = auth.currentUser;
+  batch.set(doc(collection(db, 'audit_logs')), {
+    action, target, by: admin.uid, byEmail: admin.email, createdAt: serverTimestamp(),
+  });
+};
+
+const noPermission = (e, text) => (e && e.code === 'permission-denied' ? new Error(text) : e);
+
+// data: { name, program, yearLevel, birthdate, contact, address, guardian, guardianContact } (see cleanStudent)
+export async function addStudent(studentNo, data) {
+  const ref = doc(db, 'registrar_students', studentNo);
+  if ((await getDoc(ref)).exists()) throw new Error(`${studentNo} is already on the Registrar list.`);
+  const batch = writeBatch(db);
+  batch.set(ref, data);
+  writeLog(batch, 'create_registrar_student', studentNo);
+  try {
+    await batch.commit();
+  } catch (e) {
+    throw noPermission(e, 'Not allowed. Check that the latest Firestore rules are published.');
+  }
+}
+
+export async function updateStudent(studentNo, data) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'registrar_students', studentNo), data);
+  writeLog(batch, 'update_registrar_student', studentNo);
+  try {
+    await batch.commit();
+  } catch (e) {
+    throw noPermission(e, 'Not allowed. Check that the latest Firestore rules are published.');
+  }
+}
+
+// Only works for a student who has no account yet (the rules refuse it otherwise).
+export async function deleteStudent(studentNo) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'registrar_students', studentNo));
+  writeLog(batch, 'delete_registrar_student', studentNo);
+  try {
+    await batch.commit();
+  } catch (e) {
+    throw noPermission(e, 'Could not delete. If this student already has an account, suspend the account instead. Otherwise check that the latest Firestore rules are published.');
+  }
+}
+
+// ---------------- Student photo (admin only) ----------------
+// The photo is a small JPEG data URI stored on the student's Registrar record, like the backend does.
+
+export async function saveStudentPhoto(studentNo, dataUri) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'registrar_students', studentNo), { photo: dataUri, photoUpdatedAt: serverTimestamp() });
+  writeLog(batch, 'upload_photo', studentNo);
+  try {
+    await batch.commit();
+  } catch (e) {
+    throw noPermission(e, 'Not allowed. Check that the latest Firestore rules are published.');
+  }
+}
+
+export async function removeStudentPhoto(studentNo) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'registrar_students', studentNo), { photo: deleteField(), photoUpdatedAt: deleteField() });
+  writeLog(batch, 'delete_photo', studentNo);
+  try {
+    await batch.commit();
+  } catch (e) {
+    throw noPermission(e, 'Not allowed. Check that the latest Firestore rules are published.');
+  }
 }

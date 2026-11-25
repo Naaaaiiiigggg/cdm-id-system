@@ -64,3 +64,7 @@ class RequestCreate(BaseModel):
 class RequestStatusUpdate(BaseModel):
     status: Status = Field(..., examples=["Under Review"])
     note: Optional[str] = Field(None, max_length=200, description="Optional note the student will see. Send an empty text to clear it.", examples=["Please bring a valid ID when you claim."])
+    pickupDate: Optional[str] = Field(None, pattern=BIRTHDATE, description="Required when moving to Ready for Pickup (unless already saved). Format YYYY-MM-DD.", examples=["2026-12-01"])
+    pickupFrom: Optional[str] = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$", examples=["09:00"])
+    pickupTo: Optional[str] = Field(None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$", examples=["16:00"])
+    pickupBring: Optional[str] = Field(None, max_length=100, examples=["Valid ID"])
