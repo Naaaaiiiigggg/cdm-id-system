@@ -1,9 +1,9 @@
 import { View, useWindowDimensions } from 'react-native';
 
 // Browser version. Normally keeps the app in a phone-width column in the middle of the page.
-// With wide={true} (the admin on a wide window) it lets the app use the whole window instead.
+// With wide={true} (a wide window, or a phone on its side) it lets the app use the whole window instead.
 // The structure is the same in both cases, so resizing the window does not rebuild the screens.
-// Phones get a 480px column. A tablet held upright (600px up to the wide layout) gets a roomier 680px column
+// Phones get a 480px column. A tablet held upright (600px up to the wide layout) gets a roomier column
 // with the same bottom tab bar, so the content is not squeezed and not stretched either.
 export const COLUMN_W = 480;
 export const TABLET_COLUMN_W = 768;

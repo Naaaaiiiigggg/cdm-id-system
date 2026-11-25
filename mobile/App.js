@@ -21,7 +21,7 @@ import {
   signOutUser,
 } from "./src/services/auth";
 import { studentNotice } from "./src/utils/suspension";
-import { WideContext, useWideMode } from "./src/utils/wide";
+import { WideContext, useShort, useWideMode } from "./src/utils/wide";
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from "./src/components/TabBar";
 import DialogHost from "./src/components/DialogHost";
 import InstallHint from "./src/components/InstallHint";
@@ -57,6 +57,7 @@ export default function App() {
     }
   }, []);
   const { wide, authWide } = useWideMode(session); // wide: signed in on a wide window; authWide: not signed in, wide window
+  const short = useShort(); // a phone on its side: the side menu gets a compact form
 
   // Firebase tells us whenever someone signs in or out (and restores the last session).
   useEffect(() => {
@@ -191,6 +192,7 @@ export default function App() {
           {tabs && wide && (
             <TabBar
               side
+              compact={short}
               tabs={tabs}
               tab={tab}
               setTab={setTab}

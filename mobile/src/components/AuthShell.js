@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
-import { useWideWindow } from '../utils/wide';
+import { useShort, useWideWindow } from '../utils/wide';
 import { C, common } from '../theme';
 
 const POINTS = [
@@ -15,6 +15,7 @@ const POINTS = [
 // Wide browser window: a green brand panel on the left and the form in a card on the right.
 export default function AuthShell({ children }) {
   const wide = useWideWindow();
+  const short = useShort(); // a phone on its side: a smaller brand panel and a tighter form
 
   if (!wide) {
     return <ScrollView contentContainerStyle={common.pad} keyboardShouldPersistTaps="handled">{children}</ScrollView>;
@@ -22,13 +23,13 @@ export default function AuthShell({ children }) {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <View style={styles.brand}>
+      <View style={[styles.brand, short && { padding: 24 }]}>
         <View style={styles.circleA} />
         <View style={styles.circleB} />
         <Text style={styles.sm}>COLEGIO DE MONTALBAN</Text>
-        <Text style={styles.h}>Student Identification System</Text>
+        <Text style={[styles.h, short && { fontSize: 24, lineHeight: 30, maxWidth: 300 }]}>Student Identification System</Text>
         <Text style={styles.sub}>ID ISSUANCE & REPLACEMENT</Text>
-        <View style={styles.points}>
+        <View style={[styles.points, short && { display: 'none' }]}>
           {POINTS.map(([icon, text]) => (
             <View key={text} style={styles.point}>
               <View style={styles.pointIcon}><Feather name={icon} size={16} color={C.gold} /></View>
@@ -39,8 +40,8 @@ export default function AuthShell({ children }) {
       </View>
 
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <ScrollView contentContainerStyle={styles.formWrap} keyboardShouldPersistTaps="handled">
-          <View style={styles.formBox}>{children}</View>
+        <ScrollView contentContainerStyle={[styles.formWrap, short && { padding: 12 }]} keyboardShouldPersistTaps="handled">
+          <View style={[styles.formBox, short && { padding: 18, borderRadius: 16 }]}>{children}</View>
         </ScrollView>
       </View>
     </View>
