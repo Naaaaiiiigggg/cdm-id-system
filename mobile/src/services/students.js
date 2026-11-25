@@ -97,12 +97,14 @@ const writeLog = (batch, action, target) => {
 const noPermission = (e, text) => (e && e.code === 'permission-denied' ? new Error(text) : e);
 
 // data: { name, program, yearLevel, birthdate, contact, address, guardian, guardianContact } (see cleanStudent)
-export async function addStudent(studentNo, data) {
+// photo (optional): a JPEG data URI made by PhotoUploader. It is saved together with the student, in one step.
+export async function addStudent(studentNo, data, photo) {
   const ref = doc(db, 'registrar_students', studentNo);
   if ((await getDoc(ref)).exists()) throw new Error(`${studentNo} is already on the Registrar list.`);
   const batch = writeBatch(db);
-  batch.set(ref, data);
+  batch.set(ref, photo ? { ...data, photo, photoUpdatedAt: serverTimestamp() } : data);
   writeLog(batch, 'create_registrar_student', studentNo);
+  if (photo) writeLog(batch, 'upload_photo', studentNo);
   try {
     await batch.commit();
   } catch (e) {

@@ -20,7 +20,9 @@ const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const slider = { width: '100%', accentColor: C.g9 };
 const lbl = { fontFamily: WEB_FONT, fontSize: 12, fontWeight: 700, color: C.g7, marginTop: 12, marginBottom: 2, display: 'block' };
 
-export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCancel }) {
+// With onPick (used by Add student) nothing is saved here: the cropped photo is handed back to the form, which saves it
+// together with the new student. Without onPick it saves on the student's Registrar record as before.
+export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCancel, onPick }) {
   const canvasRef = useRef(null);
   const [img, setImg] = useState(null);
   const [zoom, setZoom] = useState(100); // percent
@@ -74,6 +76,7 @@ export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCanc
         if (uri.length <= MAX_CHARS) break;
       }
       if (uri.length > MAX_CHARS) throw new Error('The photo is still too large after resizing. Try a smaller image.');
+      if (onPick) { onPick(uri); return; }
       await saveStudentPhoto(studentNo, uri);
       onSaved();
     } catch (e) {
@@ -83,6 +86,7 @@ export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCanc
   };
 
   const remove = async () => {
+    if (onPick) { onPick(''); return; }
     setBusy(true);
     setErr('');
     try {
@@ -98,7 +102,7 @@ export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCanc
 
   return (
     <View>
-      <Text style={styles.sec}>{currentPhoto ? 'Change photo' : 'Upload photo'}</Text>
+      <Text style={styles.sec}>{currentPhoto ? 'Change photo' : onPick ? 'Add photo' : 'Upload photo'}</Text>
       <Text style={common.mu}>Use a clear, front-facing photo with a plain background. It is cropped to the ID card's portrait shape.</Text>
 
       <View style={{ alignItems: 'center', marginTop: 14 }}>
@@ -131,7 +135,7 @@ export default function PhotoUploader({ studentNo, currentPhoto, onSaved, onCanc
 
       {err ? <Text style={[common.err, { marginTop: 12 }]}>{err}</Text> : null}
 
-      {img ? <Btn title={busy ? 'Saving…' : 'Save photo'} onPress={save} disabled={busy} style={busy && { opacity: 0.45 }} /> : null}
+      {img ? <Btn title={onPick ? 'Use this photo' : busy ? 'Saving…' : 'Save photo'} onPress={save} disabled={busy} style={busy && { opacity: 0.45 }} /> : null}
 
       {currentPhoto && !img ? (
         askRemove ? (

@@ -38,7 +38,6 @@ import StudentProfile from "./src/screens/student/StudentProfile";
 
 import AdminDashboard from "./src/screens/admin/AdminDashboard";
 import AdminRequests from "./src/screens/admin/AdminRequests";
-import AdminPrint from "./src/screens/admin/AdminPrint";
 import AdminAccounts from "./src/screens/admin/AdminAccounts";
 import AdminProfile from "./src/screens/admin/AdminProfile";
 
@@ -162,7 +161,6 @@ export default function App() {
     body = {
       dash: <AdminDashboard />,
       list: <AdminRequests />,
-      print: <AdminPrint />,
       accts: <AdminAccounts />,
       aprof: <AdminProfile me={session} onLogout={logout} />,
     }[tab];

@@ -26,6 +26,7 @@ export default function StudentForm({
   submitLabel,
   onSubmit,
   onCancel,
+  photoSlot,
 }) {
   const [f, setF] = useState({ ...EMPTY_STUDENT, ...(initial || {}) });
   const [localErr, setLocalErr] = useState("");
@@ -44,6 +45,7 @@ export default function StudentForm({
 
   return (
     <View>
+      {photoSlot || null}
       {isNew ? (
         <Field
           label="Student number"
@@ -56,7 +58,7 @@ export default function StudentForm({
       ) : null}
       <Field
         label="Full name"
-        placeholder="Last name, first name"
+        placeholder="First name, Last name"
         value={f.name}
         onChangeText={set("name")}
         autoCapitalize="words"

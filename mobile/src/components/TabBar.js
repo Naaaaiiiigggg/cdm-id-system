@@ -4,7 +4,7 @@ import { C } from '../theme';
 
 // Each tab: [key, Feather icon name, label]
 export const STUDENT_TABS = [['home', 'home', 'Home'], ['req', 'file-text', 'Request'], ['notif', 'bell', 'Alerts'], ['prof', 'user', 'Profile']];
-export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requests'], ['print', 'printer', 'Print'], ['accts', 'users', 'Accounts'], ['aprof', 'user', 'Profile']];
+export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requests'], ['accts', 'users', 'Accounts'], ['aprof', 'user', 'Profile']];
 
 // Bottom bar on phones and narrow windows. With side={true} (wide browser window) it is a side menu.
 // With compact={true} too (a phone on its side) it is the same side menu with tighter spacing and a slightly

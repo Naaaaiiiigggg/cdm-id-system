@@ -111,9 +111,16 @@ service cloud.firestore {
       // (The signature is drawn by the student and is not editable here.)
       allow create: if isAdmin()
         && studentNo.matches('^[0-9]{2}-[0-9]{5}$')
-        && request.resource.data.keys().hasOnly(['name', 'program', 'yearLevel', 'birthdate', 'contact', 'address', 'guardian', 'guardianContact'])
+        && request.resource.data.keys().hasOnly(['name', 'program', 'yearLevel', 'birthdate', 'contact', 'address', 'guardian', 'guardianContact', 'photo', 'photoUpdatedAt'])
         && request.resource.data.keys().hasAll(['name', 'program', 'yearLevel', 'birthdate', 'contact', 'address', 'guardian', 'guardianContact'])
-        && validStudent(request.resource.data);
+        && validStudent(request.resource.data)
+        // The ID photo (a small JPEG data URI) can be added in the same step. The photo and its time come together.
+        && (!('photo' in request.resource.data)
+            || (request.resource.data.photo is string
+                && request.resource.data.photo.size() <= 700000
+                && request.resource.data.photo.matches('data:image/jpeg;base64,.*')
+                && request.resource.data.photoUpdatedAt == request.time))
+        && (!('photoUpdatedAt' in request.resource.data) || 'photo' in request.resource.data);
       // It can also set or remove the ID photo (a small JPEG data URI) and its upload time.
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'program', 'yearLevel', 'birthdate', 'contact', 'address', 'guardian', 'guardianContact', 'photo', 'photoUpdatedAt'])
