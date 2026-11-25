@@ -11,7 +11,7 @@ import IdCardBack from '../../components/IdCardBack';
 import { ReplacementPickupInfo } from '../../components/ReplacementNotice';
 import { CARD_H, CARD_W } from '../../components/cardSize';
 import useLoad from '../../utils/useLoad';
-import { useWide } from '../../utils/wide';
+import { useShort, useWide } from '../../utils/wide';
 import { getMediaAndRequests } from '../../services/requests';
 import { formatDate, shortDate, timeRange, weekdayDate } from '../../utils/format';
 import { C, PILL, STATUSES, common } from '../../theme';
@@ -40,12 +40,14 @@ const greeting = () => {
 export default function StudentHome({ me, go }) {
   const load = useLoad(() => getMediaAndRequests(me), [me.uid]);
   const wide = useWide();
+  const short = useShort(); // a phone on its side: a slim header and a smaller ID preview (tap it to enlarge)
   // On a short window (a laptop) the page would need scrolling, so the hero gets smaller and the
   // ID preview is shrunk a little to fit. A tall window (a desktop monitor) is not changed.
   const { height: winH } = useWindowDimensions();
-  const compact = wide && winH < 800;
+  const compact = (wide && winH < 800) || short;
   const BOX_H = CARD_H + 12; // the card plus its 12px top margin
-  const idScale = wide ? Math.max(0.65, Math.min(1, (winH - 330) / BOX_H)) : 1;
+  const idScale = short ? 0.6 : wide ? Math.max(0.65, Math.min(1, (winH - 330) / BOX_H)) : 1;
+  const bigScale = Math.min(1, (winH - 40) / BOX_H); // the enlarged ID on a phone on its side: as tall as the screen allows
   const [showSteps, setShowSteps] = useState(false);
   const [side, setSide] = useState('front');
   const [preview, setPreview] = useState(false); // the ID preview pop-up
@@ -56,26 +58,42 @@ export default function StudentHome({ me, go }) {
   const idx = r ? STATUSES.indexOf(r.status) : -1;
   const colors = r ? PILL[r.status] || PILL.Submitted : PILL.Submitted;
 
+  const studentChip = (
+    <View style={[styles.chip, compact && { marginTop: 6 }, short && { marginTop: 0 }]}>
+      <Feather name="credit-card" size={12} color={C.gold} />
+      <Text style={styles.chipTx}>{me.studentNo}</Text>
+    </View>
+  );
+
+  // The ID card shrunk to `scale` (it is drawn at full size and scaled, so front and back stay identical).
+  const idBox = (scale) => (
+    <View style={{ width: CARD_W * scale, height: BOX_H * scale }}>
+      <View style={{ width: CARD_W, height: BOX_H, transform: [{ translateX: -(CARD_W * (1 - scale)) / 2 }, { translateY: -(BOX_H * (1 - scale)) / 2 }, { scale }] }}>
+        {side === 'front'
+          ? <IdCard name={me.name} studentNo={me.studentNo} program={me.program} photo={media.photo} signature={signature} />
+          : <IdCardBack info={media} />}
+      </View>
+    </View>
+  );
+
   return (
     <Page load={load}>
       {/* ---------- hero ---------- */}
-      <View style={[styles.hero, compact && { padding: 12 }]}>
+      <View style={[styles.hero, compact && { padding: 12 }, short && { padding: 10, borderRadius: 14 }]}>
         <View style={styles.circleA} />
         <View style={styles.circleB} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroSm}>{greeting().toUpperCase()}</Text>
-          <Text style={[styles.heroH, compact && { fontSize: 18, marginVertical: 2 }]} numberOfLines={2}>{me.name}</Text>
+          {short ? null : <Text style={styles.heroSm}>{greeting().toUpperCase()}</Text>}
+          <Text style={[styles.heroH, compact && { fontSize: 18, marginVertical: 2 }, short && { fontSize: 16, marginVertical: 0 }]} numberOfLines={short ? 1 : 2}>{me.name}</Text>
           <Text style={styles.heroSub}>{me.program} · {me.yearLevel}</Text>
-          <View style={[styles.chip, compact && { marginTop: 6 }]}>
-            <Feather name="credit-card" size={12} color={C.gold} />
-            <Text style={styles.chipTx}>{me.studentNo}</Text>
-          </View>
+          {short ? null : studentChip}
         </View>
+        {short ? studentChip : null}
       </View>
 
-      <View style={wide ? styles.cols : null}>
+      <View style={wide ? [styles.cols, short && { gap: 12 }] : null}>
         <View style={wide ? styles.colMain : null}>
-      <Text style={[common.h3, { marginTop: 20 }]}>My ID request</Text>
+      <Text style={[common.h3, { marginTop: short ? 12 : 20 }]}>My ID request</Text>
       {r ? (
         <Card style={{ padding: 0, overflow: 'hidden' }}>
           <View style={[styles.stHead, { backgroundColor: colors[0] }]}>
@@ -181,8 +199,8 @@ export default function StudentHome({ me, go }) {
       )}
         </View>
         {wide && r ? (
-          <View style={styles.colSide}>
-            <Text style={[common.h3, { marginTop: 20 }]}>Your ID</Text>
+          <View style={[styles.colSide, short && { width: CARD_W * idScale + 30 }]}>
+            <Text style={[common.h3, { marginTop: short ? 12 : 20 }]}>Your ID</Text>
             <Card>
               <View style={[styles.seg, { marginTop: 0 }]}>
                 {['front', 'back'].map((sd) => (
@@ -191,17 +209,17 @@ export default function StudentHome({ me, go }) {
                   </TouchableOpacity>
                 ))}
               </View>
-              <View style={{ alignItems: 'center', marginTop: 14 }}>
-                <View style={{ width: CARD_W * idScale, height: BOX_H * idScale }}>
-                  <View style={{ width: CARD_W, height: BOX_H, transform: [{ translateX: -(CARD_W * (1 - idScale)) / 2 }, { translateY: -(BOX_H * (1 - idScale)) / 2 }, { scale: idScale }] }}>
-                    {side === 'front'
-                      ? <IdCard name={me.name} studentNo={me.studentNo} program={me.program} photo={media.photo} signature={signature} />
-                      : <IdCardBack info={media} />}
-                  </View>
-                </View>
+              <View style={{ alignItems: 'center', marginTop: short ? 6 : 14 }}>
+                {short ? (
+                  <TouchableOpacity activeOpacity={0.85} onPress={() => setPreview(true)} accessibilityLabel="Enlarge your ID">
+                    {idBox(idScale)}
+                  </TouchableOpacity>
+                ) : idBox(idScale)}
               </View>
-              <Text style={[common.mu, { textAlign: 'center', marginTop: 10 }]}>
-                {media.photo ? 'Preview only. The printed ID may look slightly different.' : 'Waiting for the Registrar to upload your photo.'}
+              <Text style={[common.mu, { textAlign: 'center', marginTop: 10 }, short && { fontSize: 11, marginTop: 4 }]}>
+                {short
+                  ? 'Tap the ID to enlarge it.'
+                  : media.photo ? 'Preview only. The printed ID may look slightly different.' : 'Waiting for the Registrar to upload your photo.'}
               </Text>
             </Card>
           </View>
@@ -212,6 +230,30 @@ export default function StudentHome({ me, go }) {
       <Modal visible={preview} transparent animationType="fade" onRequestClose={() => setPreview(false)}>
         <View style={styles.backdrop}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setPreview(false)} />
+          {short ? (
+            // A phone on its side: the ID on the left (as tall as the screen allows), the controls on the right.
+            <View style={[styles.sheet, { maxWidth: 620, flexDirection: 'row', alignItems: 'center', gap: 16, padding: 12, maxHeight: winH - 16 }]}>
+              {idBox(bigScale)}
+              <View style={{ flex: 1 }}>
+                <View style={common.rowBetween}>
+                  <Text style={styles.sheetTitle}>Your ID</Text>
+                  <TouchableOpacity onPress={() => setPreview(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Feather name="x" size={22} color={C.ink} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.seg}>
+                  {['front', 'back'].map((sd) => (
+                    <TouchableOpacity key={sd} style={[styles.segBtn, side === sd && styles.segOn]} onPress={() => setSide(sd)}>
+                      <Text style={[styles.segTx, side === sd && { color: C.ink }]}>{sd === 'front' ? 'Front' : 'Back'}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={[common.mu, { marginTop: 12, fontSize: 12 }]}>
+                  {media.photo ? 'Preview only. The printed ID may look slightly different.' : 'Waiting for the Registrar to upload your photo.'}
+                </Text>
+              </View>
+            </View>
+          ) : (
           <View style={styles.sheet}>
             <View style={common.rowBetween}>
               <Text style={styles.sheetTitle}>Your ID</Text>
@@ -233,6 +275,7 @@ export default function StudentHome({ me, go }) {
               {media.photo ? 'Preview only. The printed ID may look slightly different.' : 'Waiting for the Registrar to upload your photo.'}
             </Text>
           </View>
+          )}
         </View>
       </Modal>
     </Page>
