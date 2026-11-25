@@ -120,7 +120,7 @@ export default function ManageRequestModal({ request, student = {}, onClose, onS
   const goReject = () => { setMode('reject'); setNote(''); setErr(''); };
   const cancelReject = () => { setMode('move'); setNote(''); setErr(''); };
 
-  const label = busy ? 'Saving…' : moving ? (request.status === 'Rejected' ? `Reopen as ${status} →` : `Move to ${status} →`) : 'Save changes';
+  const label = busy ? 'Saving…' : moving ? (request.status === 'Rejected' ? `Reopen as ${status} ` : `Move to ${status} `) : 'Save changes';
   const off = busy || !changed || blocked;
 
   const sideBySide = wide && showId;
