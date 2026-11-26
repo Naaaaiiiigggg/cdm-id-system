@@ -148,11 +148,3 @@ def update_status(request_no: str, payload: RequestStatusUpdate, admin: dict = D
     return {"message": "Status updated", "data": {"id": request_no, **clean(ref.get().to_dict())}}
 
 
-@router.delete("/{request_no}", summary="Delete a request (admin)")
-def delete_request(request_no: str, admin: dict = Depends(require_admin)):
-    ref = db.collection(COL).document(request_no)
-    if not ref.get().exists:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
-    ref.delete()
-    audit(admin, "delete_request", request_no)
-    return {"message": "Request deleted"}
