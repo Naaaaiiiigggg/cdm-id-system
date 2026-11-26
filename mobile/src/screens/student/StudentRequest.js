@@ -36,6 +36,12 @@ const REASONS = {
   Replacement: ["Lost", "Stolen", "Damaged", "Change of name or program"],
 };
 
+// A 3rd or 4th year student cannot be a first-year enrollee, so that reason is not shown to them.
+const UPPER_YEARS = ["3rd Year", "4th Year"];
+const FIRST_YEAR_REASON = REASONS["New ID"][0];
+const reasonsFor = (t, yearLevel) =>
+  REASONS[t].filter((r) => !(r === FIRST_YEAR_REASON && UPPER_YEARS.includes(yearLevel)));
+
 function ReadOnly({ label, value, verified }) {
   return (
     <View>
@@ -66,7 +72,7 @@ export default function StudentRequest({ me, go }) {
   const [savedSig, setSavedSig] = useState(null);
   const [side, setSide] = useState("front"); // which side of the ID is shown in the review
   const [type, setType] = useState("New ID");
-  const [reason, setReason] = useState(REASONS["New ID"][0]);
+  const [reason, setReason] = useState(reasonsFor("New ID", me.yearLevel)[0]);
   const [ok, setOk] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,8 +80,9 @@ export default function StudentRequest({ me, go }) {
 
   const pickType = (t) => {
     setType(t);
-    setReason(REASONS[t][0]);
+    setReason(reasonsFor(t, me.yearLevel)[0]);
   };
+  const reasons = reasonsFor(type, me.yearLevel);
   const media = load.data?.media || {};
   const signature = savedSig || load.data?.signature || null;
   const active = load.data ? activeRequest(load.data.requests) : null;
@@ -289,7 +296,7 @@ export default function StudentRequest({ me, go }) {
             Reason
           </Text>
           <View style={styles.chips}>
-            {REASONS[type].map((r) => (
+            {reasons.map((r) => (
               <TouchableOpacity
                 key={r}
                 style={[styles.chip, reason === r && styles.chipOn]}
