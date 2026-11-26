@@ -9,7 +9,7 @@ import { useWide } from '../utils/wide';
 import { C, common } from '../theme';
 
 // Pop-up form: add a student to the Registrar list. The student can then register with their number and birthdate.
-// In the browser the Registrar can also choose the student's ID photo here (optional), so it is saved in the same step.
+// In the browser the Registrar also chooses the student's ID photo here (required), so it is saved in the same step.
 export default function AddStudentModal({ visible, onClose, onSaved }) {
   const wide = useWide();
   const { height: winH } = useWindowDimensions();
@@ -21,6 +21,11 @@ export default function AddStudentModal({ visible, onClose, onSaved }) {
   if (!visible) return <Modal visible={false} transparent />;
 
   const save = async (data, studentNo) => {
+    // The ID cannot be printed without a photo, so it is required here (in the browser, where the photo can be chosen).
+    if (Platform.OS === 'web' && !photo) {
+      setErr("Add the student's photo first. It is needed to print the ID.");
+      return;
+    }
     setBusy(true);
     setErr('');
     try {
@@ -37,15 +42,15 @@ export default function AddStudentModal({ visible, onClose, onSaved }) {
   const close = () => { if (!busy) { setErr(''); setPhoto(''); setPicking(false); onClose(); } };
 
   const photoSlot = Platform.OS === 'web' ? (
-    <View style={styles.photoRow}>
+    <View style={[styles.photoRow, !photo && /photo/i.test(err) && { borderColor: '#B42318' }]}>
       {photo ? (
         <Image source={{ uri: photo }} style={styles.thumb} />
       ) : (
         <View style={[styles.thumb, styles.thumbEmpty]}><Feather name="camera" size={20} color={C.mu} /></View>
       )}
       <View style={{ flex: 1 }}>
-        
-        <Text style={common.mu}>{photo ? 'Photo ready. It is saved together with the student.' : "Add it now, or later from the student's record."}</Text>
+        <Text style={styles.photoLbl}>Photo (required)</Text>
+        <Text style={common.mu}>{photo ? 'Photo ready. It is saved together with the student.' : 'Needed to print the ID.'}</Text>
         <TouchableOpacity style={styles.photoBtn} onPress={() => setPicking(true)} disabled={busy}>
           <Text style={styles.photoBtnTx}>{photo ? 'Change photo' : 'Add photo'}</Text>
         </TouchableOpacity>
@@ -60,7 +65,10 @@ export default function AddStudentModal({ visible, onClose, onSaved }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.kav, wide && { maxWidth: 560 }]}>
           <View style={[styles.sheet, { maxHeight: winH * 0.94 }, wide && { borderRadius: 22 }]}>
             <View style={common.rowBetween}>
-             
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Add student</Text>
+                <Text style={common.mu}>The student can register once they are on this list.</Text>
+              </View>
               <TouchableOpacity onPress={close} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Feather name="x" size={22} color={C.ink} />
               </TouchableOpacity>
