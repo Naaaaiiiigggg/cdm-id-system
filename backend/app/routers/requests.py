@@ -33,9 +33,9 @@ def create_request(payload: RequestCreate, user: dict = Depends(get_current_user
     else:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not allowed")
 
-    # Business rule: one active request at a time.
+       # Business rule: one active request at a time.
     for d in db.collection(COL).where("uid", "==", uid).stream():
-        if d.to_dict().get("status") != "Claimed":
+        if d.to_dict().get("status") not in config.DONE_STAGES:
             raise HTTPException(status.HTTP_409_CONFLICT, f"There is already an active request ({d.id})")
 
     request_no = f"REQ-{datetime.now():%Y%m%d}-{uuid.uuid4().hex[:4].upper()}"

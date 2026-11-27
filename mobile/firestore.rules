@@ -41,7 +41,7 @@ service cloud.firestore {
     // Same checks as the backend (schemas.py StudentCreate).
     function validStudent(d) {
       return d.name is string && d.name.size() >= 2 && d.name.size() <= 100
-        && d.program in ['BSIT', 'BSCPE', 'BSEd-SCI', 'BEEd-GEN', 'BEEd-ECED', 'BTLEd-ICT', 'TCP', 'BSBA-HRM', 'BSE']
+        && d.program in ['BSIT', 'BSCPE', 'BSEd-SCI', 'BEEd-GEN', 'BEEd-ECED', 'BTLEd-ICT', 'BSBA-HRM', 'BSE']
         && d.yearLevel in ['1st Year', '2nd Year', '3rd Year', '4th Year']
         && d.birthdate is string && d.birthdate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && d.contact is string && d.contact.matches('^09[0-9]{9}$')

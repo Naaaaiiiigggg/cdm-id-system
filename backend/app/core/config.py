@@ -27,5 +27,8 @@ ALLOWED_TRANSITIONS = {
 # From these stages on, the ID needs the Registrar photo and the student's signature.
 PRINT_STAGES = ["For Printing", "Ready for Pickup", "Claimed"]
 
+
+# Requests in these stages are finished: the student may file a new one.
+DONE_STAGES = ["Claimed", "Rejected"]
 # Public Firebase web API key (the same one the mobile app uses). Needed for the /auth/login helper.
 FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "AIzaSyBFJQN3CJrOT1isXD693af5_bYbSWAa8tw")
