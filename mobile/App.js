@@ -21,6 +21,7 @@ import {
   signOutUser,
 } from "./src/services/auth";
 import { studentNotice } from "./src/utils/suspension";
+import { watchUnreadAlerts } from "./src/services/requests";
 import { WideContext, useShort, useWideMode } from "./src/utils/wide";
 import TabBar, { ADMIN_TABS, STUDENT_TABS } from "./src/components/TabBar";
 import DialogHost from "./src/components/DialogHost";
@@ -47,6 +48,7 @@ export default function App() {
   const [screen, setScreen] = useState("splash"); // splash | login | register | forgot
   const [tab, setTab] = useState("home");
   const [notice, setNotice] = useState(""); // shown on the sign-in screen (for example: you were suspended)
+  const [unread, setUnread] = useState(0); // number of unread alerts (students only)
 
   const open = useCallback((s) => {
     setSession(s);
@@ -100,6 +102,15 @@ export default function App() {
     );
     return stop;
   }, [session?.uid]);
+
+  // Students: keep the unread-alerts count live (it updates when the Registrar moves a request).
+  useEffect(() => {
+    if (session?.role !== "student") {
+      setUnread(0);
+      return undefined;
+    }
+    return watchUnreadAlerts(session.uid, setUnread);
+  }, [session?.uid, session?.role]);
 
   // Called when a new student taps Continue on the "Is this you?" screen.
   const afterRegister = async () => {
@@ -194,6 +205,7 @@ export default function App() {
               tabs={tabs}
               tab={tab}
               setTab={setTab}
+              badges={{ notif: tab === "notif" ? 0 : unread }}
               subtitle={session.role === "admin" ? "Registrar" : "Student"}
             />
           )}
@@ -213,7 +225,14 @@ export default function App() {
               {body}
             </View>
           )}
-          {tabs && !wide && <TabBar tabs={tabs} tab={tab} setTab={setTab} />}
+          {tabs && !wide && (
+            <TabBar
+              tabs={tabs}
+              tab={tab}
+              setTab={setTab}
+              badges={{ notif: tab === "notif" ? 0 : unread }}
+            />
+          )}
           <DialogHost />
         </View>
       </WideContext.Provider>

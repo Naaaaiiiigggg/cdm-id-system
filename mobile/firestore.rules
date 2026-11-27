@@ -209,7 +209,11 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() <= 600
         && request.resource.data.createdAt == request.time;
-      allow update, delete: if false;
+      // A student can only mark their own alert as read (the readAt field, nothing else).
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+        && request.resource.data.readAt == request.time;
+      allow delete: if false;
     }
 
     match /audit_logs/{id} {
