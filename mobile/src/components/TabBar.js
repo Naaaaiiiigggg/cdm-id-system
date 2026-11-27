@@ -9,7 +9,14 @@ export const ADMIN_TABS = [['dash', 'grid', 'Dashboard'], ['list', 'list', 'Requ
 // Bottom bar on phones and narrow windows. With side={true} (wide browser window) it is a side menu.
 // With compact={true} too (a phone on its side) it is the same side menu with tighter spacing and a slightly
 // narrower width, so it fits the short screen (and scrolls if the screen is really small).
-export default function TabBar({ tabs, tab, setTab, side, compact, subtitle = 'Registrar' }) {
+// Small red counter on a tab (for example unread alerts). inline = inside the side menu row.
+const Badge = ({ n, inline }) => (n > 0 ? (
+  <View style={[styles.badge, inline && styles.badgeInline]}>
+    <Text style={styles.badgeTx}>{n > 9 ? '9+' : n}</Text>
+  </View>
+) : null);
+
+export default function TabBar({ tabs, tab, setTab, side, compact, subtitle = 'Registrar', badges = {} }) {
   if (side) {
     const menu = (
       <>
@@ -28,6 +35,7 @@ export default function TabBar({ tabs, tab, setTab, side, compact, subtitle = 'R
             >
               <Feather name={icon} size={compact ? 18 : 19} color={on ? C.g9 : '#CFE0D6'} />
               <Text style={[styles.itemTx, compact && { fontSize: 13.5 }, on && { color: C.g9 }]}>{label}</Text>
+              <Badge n={badges[key]} inline />
             </Pressable>
           );
         })}
@@ -47,7 +55,10 @@ export default function TabBar({ tabs, tab, setTab, side, compact, subtitle = 'R
     <View style={styles.bar}>
       {tabs.map(([key, icon, label]) => (
         <TouchableOpacity key={key} style={styles.tab} onPress={() => setTab(key)}>
-          <Feather name={icon} size={22} color={tab === key ? C.g9 : C.mu} />
+          <View>
+            <Feather name={icon} size={22} color={tab === key ? C.g9 : C.mu} />
+            <Badge n={badges[key]} />
+          </View>
           <Text style={[styles.tx, tab === key && { color: C.g9, fontWeight: '800' }]}>{label}</Text>
         </TouchableOpacity>
       ))}
@@ -74,4 +85,8 @@ const styles = StyleSheet.create({
   itemOn: { backgroundColor: C.gold },
   itemHover: { backgroundColor: 'rgba(255,255,255,0.08)' },
   itemTx: { color: '#CFE0D6', fontSize: 14, fontWeight: '700' },
+
+  badge: { position: 'absolute', top: -5, right: -10, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#D32F2F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badgeInline: { position: 'relative', top: 0, right: 0, marginLeft: 'auto' },
+  badgeTx: { color: '#fff', fontSize: 10, fontWeight: '800' },
 });

@@ -20,6 +20,3 @@ app.include_router(media.router)
 app.include_router(requests.router)
 
 
-@app.get("/", tags=["Health"])
-def root():
-    return {"message": "CdM Student ID API is running", "docs": "/docs"}

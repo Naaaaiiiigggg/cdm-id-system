@@ -41,7 +41,7 @@ service cloud.firestore {
     // Same checks as the backend (schemas.py StudentCreate).
     function validStudent(d) {
       return d.name is string && d.name.size() >= 2 && d.name.size() <= 100
-        && d.program in ['BSIT', 'BSCPE', 'BSEd-SCI', 'BEEd-GEN', 'BEEd-ECED', 'BTLEd-ICT', 'TCP', 'BSBA-HRM', 'BSE']
+        && d.program in ['BSIT', 'BSCPE', 'BSEd-SCI', 'BEEd-GEN', 'BEEd-ECED', 'BTLEd-ICT', 'BSBA-HRM', 'BSE']
         && d.yearLevel in ['1st Year', '2nd Year', '3rd Year', '4th Year']
         && d.birthdate is string && d.birthdate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && d.contact is string && d.contact.matches('^09[0-9]{9}$')
@@ -209,7 +209,11 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() <= 600
         && request.resource.data.createdAt == request.time;
-      allow update, delete: if false;
+      // A student can only mark their own alert as read (the readAt field, nothing else).
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+        && request.resource.data.readAt == request.time;
+      allow delete: if false;
     }
 
     match /audit_logs/{id} {

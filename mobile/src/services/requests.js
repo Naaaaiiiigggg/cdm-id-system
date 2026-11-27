@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getStudentMap } from './students';
 import { STATUSES } from '../theme';
@@ -16,6 +16,25 @@ export async function getMyRequests(uid) {
 // A student's own alerts, newest first.
 export async function getMyAlerts(uid) {
   return toList(await getDocs(query(collection(db, 'notifications'), where('uid', '==', uid))));
+}
+
+// Live count of the student's unread alerts (alerts without readAt). Returns the unsubscribe function.
+// 'estimate' stops the count from flickering while a readAt write is still pending.
+export function watchUnreadAlerts(uid, onCount) {
+  return onSnapshot(
+    query(collection(db, 'notifications'), where('uid', '==', uid)),
+    (snap) => onCount(snap.docs.filter((d) => !d.data({ serverTimestamps: 'estimate' }).readAt).length),
+    () => {},
+  );
+}
+
+// Marks the given alerts as read (one batch). Alerts that already have readAt are skipped.
+export async function markAlertsRead(list) {
+  const unread = list.filter((a) => !a.readAt);
+  if (!unread.length) return;
+  const batch = writeBatch(db);
+  unread.forEach((a) => batch.update(doc(db, 'notifications', a.id), { readAt: serverTimestamp() }));
+  await batch.commit();
 }
 
 // Admin: all requests plus the student names to show next to them.
